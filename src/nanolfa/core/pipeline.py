@@ -6,10 +6,9 @@ import logging
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import click
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 
 from nanolfa.core.config import load_config
 from nanolfa.filters.developability import DevelopabilityFilter
@@ -33,32 +32,32 @@ class Candidate:
     candidate_id: str
     sequence: str
     round_created: int
-    parent_id: Optional[str] = None
+    parent_id: str | None = None
 
     # Structure (populated after AF prediction)
-    structure_path: Optional[Path] = None
-    complex_path: Optional[Path] = None
+    structure_path: Path | None = None
+    complex_path: Path | None = None
 
     # Scores (populated after scoring)
-    iptm: Optional[float] = None
-    plddt_interface: Optional[float] = None
-    shape_complementarity: Optional[float] = None
-    binding_energy: Optional[float] = None
-    buried_surface_area: Optional[float] = None
-    developability_score: Optional[float] = None
-    composite_score: Optional[float] = None
+    iptm: float | None = None
+    plddt_interface: float | None = None
+    shape_complementarity: float | None = None
+    binding_energy: float | None = None
+    buried_surface_area: float | None = None
+    developability_score: float | None = None
+    composite_score: float | None = None
 
     # Filters
-    passed_hard_gates: Optional[bool] = None
-    tier: Optional[str] = None  # "green", "yellow", "red"
-    rejection_reason: Optional[str] = None
+    passed_hard_gates: bool | None = None
+    tier: str | None = None  # "green", "yellow", "red"
+    rejection_reason: str | None = None
 
     # Experimental (populated in Phase 6)
-    experimental_kd: Optional[float] = None
-    experimental_kon: Optional[float] = None
-    experimental_koff: Optional[float] = None
-    experimental_tm: Optional[float] = None
-    lfa_signal_noise: Optional[float] = None
+    experimental_kd: float | None = None
+    experimental_kon: float | None = None
+    experimental_koff: float | None = None
+    experimental_tm: float | None = None
+    lfa_signal_noise: float | None = None
 
     # Lineage tracking
     mutations_from_parent: list[str] = field(default_factory=list)
@@ -172,7 +171,9 @@ class NanoLFAPipeline:
                 candidates_predicted=len(predicted),
                 candidates_passed_gates=len(filtered),
                 candidates_advanced=len(advanced),
-                best_composite_score=advanced[0].composite_score if advanced else 0,
+                best_composite_score=(
+                    advanced[0].composite_score or 0.0 if advanced else 0.0
+                ),
                 mean_composite_score=self._mean_score(advanced),
                 median_iptm=self._median_iptm(advanced),
                 wall_time_hours=wall_time,
@@ -255,11 +256,15 @@ class NanoLFAPipeline:
                 continue
             if (cand.plddt_interface or 0) < thresholds.plddt_interface_min:
                 cand.passed_hard_gates = False
-                cand.rejection_reason = f"pLDDT_if={cand.plddt_interface:.1f} < {thresholds.plddt_interface_min}"
+                cand.rejection_reason = (
+                    f"pLDDT_if={cand.plddt_interface:.1f} < {thresholds.plddt_interface_min}"
+                )
                 continue
             if (cand.binding_energy or 0) > thresholds.binding_energy_max:
                 cand.passed_hard_gates = False
-                cand.rejection_reason = f"ΔG={cand.binding_energy:.1f} > {thresholds.binding_energy_max}"
+                cand.rejection_reason = (
+                    f"ΔG={cand.binding_energy:.1f} > {thresholds.binding_energy_max}"
+                )
                 continue
 
             dev_report = self.dev_filter.evaluate(cand)
@@ -411,7 +416,7 @@ class NanoLFAPipeline:
 @click.option("--config", required=True, type=click.Path(exists=True), help="YAML config path")
 @click.option("--rounds", default=None, type=int, help="Override max rounds")
 @click.option("--seed-fasta", default=None, type=click.Path(), help="Seed sequences FASTA")
-def main(config: str, rounds: Optional[int], seed_fasta: Optional[str]) -> None:
+def main(config: str, rounds: int | None, seed_fasta: str | None) -> None:
     """Run the NanoLFA-Design iterative pipeline."""
     cfg = load_config(config)
     if rounds is not None:

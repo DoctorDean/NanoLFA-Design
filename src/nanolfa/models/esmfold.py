@@ -40,18 +40,20 @@ class ESMFoldPrescreen:
         if self._model is not None:
             return
 
-        import torch
         import esm
+        import torch
 
         logger.info("Loading ESMFold model...")
-        self._model = esm.pretrained.esmfold_v1()
-        self._model = self._model.eval()
+        model = esm.pretrained.esmfold_v1()
+        model = model.eval()
 
         if torch.cuda.is_available():
-            self._model = self._model.cuda()
+            model = model.cuda()
             logger.info("ESMFold loaded on GPU")
         else:
             logger.warning("ESMFold running on CPU (slow)")
+
+        self._model = model
 
     def filter(
         self,
@@ -109,8 +111,11 @@ class ESMFoldPrescreen:
         """Predict mean pLDDT for a single sequence using ESMFold."""
         import torch
 
+        if self._model is None:
+            raise RuntimeError("ESMFold model not loaded. Call _load_model() first.")
+
         with torch.no_grad():
-            output = self._model.infer(sequence)  # type: ignore[union-attr]
+            output = self._model.infer(sequence)
 
         # pLDDT is in the B-factor field of the output, shape [1, L, 1]
         plddt = output["plddt"].squeeze()

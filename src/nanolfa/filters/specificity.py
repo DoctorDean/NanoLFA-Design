@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from omegaconf import DictConfig
@@ -152,7 +151,8 @@ class SpecificityFilter:
         # Decision rules
         if worst_score > self.thresholds.max_off_target_iptm:
             failure_reasons.append(
-                f"off-target {worst_name} score={worst_score:.3f}>{self.thresholds.max_off_target_iptm}"
+                f"off-target {worst_name} score={worst_score:.3f}"
+                f">{self.thresholds.max_off_target_iptm}"
             )
         if selectivity < self.thresholds.min_selectivity_ratio:
             failure_reasons.append(

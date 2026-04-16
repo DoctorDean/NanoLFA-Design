@@ -3,7 +3,7 @@
 import pytest
 from omegaconf import OmegaConf
 
-from nanolfa.filters.developability import DevelopabilityFilter, KD_HYDROPHOBICITY
+from nanolfa.filters.developability import DevelopabilityFilter
 
 
 @pytest.fixture
@@ -42,23 +42,25 @@ class TestLiabilityScanning:
     def test_detects_ng_motif(self, dev_filter):
         seq = "AAAAANGAAAA"
         liabilities = dev_filter._scan_liabilities(seq)
-        assert any("NG" in l for l in liabilities)
+        assert any("NG" in lib for lib in liabilities)
 
     def test_detects_ds_motif(self, dev_filter):
         seq = "AAAADSAAAA"
         liabilities = dev_filter._scan_liabilities(seq)
-        assert any("DS" in l for l in liabilities)
+        assert any("DS" in lib for lib in liabilities)
 
     def test_detects_met_oxidation(self, dev_filter):
         seq = "AAAAMAAAA"
         liabilities = dev_filter._scan_liabilities(seq)
-        assert any("M" in l for l in liabilities)
+        assert any("M" in lib for lib in liabilities)
 
     def test_clean_sequence_no_liabilities(self, dev_filter):
         seq = "QVQLVESGGGLVQAGG"  # no liability motifs
         liabilities = dev_filter._scan_liabilities(seq)
         # May find single M, but no NG/NS/DG/DS
-        pattern_liabilities = [l for l in liabilities if "NG" in l or "DS" in l or "DG" in l]
+        pattern_liabilities = [
+            lib for lib in liabilities if "NG" in lib or "DS" in lib or "DG" in lib
+        ]
         assert len(pattern_liabilities) == 0
 
 

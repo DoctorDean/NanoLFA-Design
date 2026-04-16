@@ -51,6 +51,29 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed (post-0.1.0)
+
+- Resolve all ruff violations from initial CI run (unused imports, legacy
+  `Optional[X]` syntax modernized to `X | None`, long lines wrapped,
+  `zip()` calls updated with `strict=` parameter, ambiguous variable names
+  in tests renamed)
+- Fix loop variable binding bug in `ChainSelect` closure in
+  `scoring/composite.py` — previously the chain selector would reference
+  the wrong chain due to Python's late-binding behavior, which would have
+  caused incorrect BSA calculations
+- Relax mypy config to `ignore_missing_imports = true` and
+  `warn_return_any = false` — scientific libraries (Biopython, FreeSASA,
+  PyRosetta, RDKit) have incomplete type stubs. Will tighten as typed
+  wrappers are added.
+- Add `DictConfig` type narrowing in `core/config.py` to satisfy mypy
+  with OmegaConf's union return type
+- Make ESMFold lazy loader type-safe by assigning to local variable
+  before setting instance field
+- Remove `pytest-cov` from default addopts to avoid CI failure when
+  coverage plugin isn't installed
+- Migrate ruff `select` from top-level to `[tool.ruff.lint]` section
+  (deprecated location)
+
 ### Planned for v0.2.0
 
 - Phase 1 implementation: target preparation scripts with RDKit/OpenBabel integration

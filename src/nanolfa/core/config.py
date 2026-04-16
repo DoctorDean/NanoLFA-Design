@@ -32,6 +32,8 @@ def load_config(config_path: str | Path, overrides: dict[str, Any] | None = None
         raise FileNotFoundError(f"Config not found: {config_path}")
 
     cfg = OmegaConf.load(config_path)
+    if not isinstance(cfg, DictConfig):
+        raise ValueError(f"Config at {config_path} must be a YAML mapping, not a list")
 
     # Handle defaults/inheritance
     if "defaults" in cfg:
@@ -60,6 +62,7 @@ def load_config(config_path: str | Path, overrides: dict[str, Any] | None = None
     OmegaConf.resolve(cfg)
 
     # Validate
+    assert isinstance(cfg, DictConfig), "Config must be a DictConfig (mapping)"
     _validate_config(cfg)
 
     logger.info("Loaded config for target=%s from %s", cfg.target.name, config_path)

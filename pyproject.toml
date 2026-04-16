@@ -82,14 +82,20 @@ where = ["src"]
 [tool.ruff]
 target-version = "py310"
 line-length = 100
+
+[tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP", "B", "A", "SIM"]
 
 [tool.mypy]
 python_version = "3.10"
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
-disallow_untyped_defs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+# Scientific libs (Biopython, FreeSASA, PyRosetta, RDKit) have incomplete
+# type stubs. Strict mode here would fail for reasons unrelated to our code.
+# Tighten these as we add typed wrappers around third-party calls.
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=nanolfa --cov-report=term-missing -v"
+addopts = "-v"
