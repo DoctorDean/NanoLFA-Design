@@ -1,0 +1,99 @@
+# ============================================================================
+# NanoLFA-Design — Scoring Configuration
+# ============================================================================
+# Composite scoring function for ranking nanobody candidates.
+# See docs/SCORING.md for derivation and calibration notes.
+# ============================================================================
+
+# --- Composite Score Weights ------------------------------------------------
+# All weights must sum to 1.0
+weights:
+  iptm: 0.25                   # AlphaFold interface predicted TM-score
+  plddt_interface: 0.20        # Mean pLDDT of interface residues
+  shape_complementarity: 0.15  # Lawrence-Colman Sc statistic
+  binding_energy: 0.20         # Rosetta/FoldX ΔG_bind (normalized)
+  buried_surface_area: 0.10    # Interface BSA (normalized)
+  developability: 0.10         # Meta-score from filters
+
+# --- Per-Metric Normalization -----------------------------------------------
+# Each raw metric is normalized to [0, 1] before weighting.
+# Formula: score_norm = clip((raw - min) / (max - min), 0, 1)
+
+normalization:
+  iptm:
+    min: 0.4                   # below this is noise
+    max: 0.95                  # theoretical best for nanobody-hapten
+  plddt_interface:
+    min: 50.0                  # very low confidence
+    max: 95.0                  # very high confidence
+  shape_complementarity:
+    min: 0.40                  # poor complementarity
+    max: 0.80                  # excellent complementarity
+  binding_energy:              # note: more negative = better
+    min: -50.0                 # very strong (REU or kcal/mol)
+    max: 0.0                   # no binding
+    invert: true               # flip so that more negative → higher score
+  buried_surface_area:
+    min: 300.0                 # Å²; minimal for hapten
+    max: 900.0                 # Å²; large for nanobody-protein
+  developability:
+    min: 0.0
+    max: 1.0                   # already scaled 0–1
+
+# --- Decision Thresholds ----------------------------------------------------
+# Three tiers: advance (green), borderline (yellow), reject (red)
+
+thresholds:
+  # Tier 1: Hard gates — must pass ALL to advance
+  hard_gates:
+    iptm_min: 0.60
+    plddt_interface_min: 65.0
+    binding_energy_max: -15.0          # REU; must be at least this favorable
+    aggregation_score_max: 0.50
+    liability_count_max: 3
+
+  # Tier 2: Soft ranking thresholds for top-K selection
+  advance:                              # green — top candidates
+    composite_score_min: 0.70
+    iptm_min: 0.75
+    plddt_interface_min: 80.0
+    shape_complementarity_min: 0.65
+    binding_energy_max: -30.0
+  borderline:                           # yellow — keep in pool
+    composite_score_min: 0.50
+    iptm_min: 0.60
+    plddt_interface_min: 65.0
+    shape_complementarity_min: 0.55
+    binding_energy_max: -20.0
+
+  # Cross-reactivity — Phase 4
+  specificity:
+    max_off_target_iptm: 0.50          # if binds off-target this well, reject
+    min_selectivity_ratio: 2.0          # on-target score / best off-target score
+    off_target_binding_energy_max: -10.0  # REU; off-target must be weak
+
+# --- Convergence Detection --------------------------------------------------
+convergence:
+  metric: "composite_score"
+  window: 2                             # compare current vs N rounds ago
+  min_delta: 0.02                       # stop if improvement < this
+  min_rounds: 3                         # always run at least this many rounds
+
+# --- Experimental Calibration -----------------------------------------------
+# After Phase 6, these offsets adjust predictions to match experimental data
+calibration:
+  enabled: false
+  # Linear correction: adjusted = slope * predicted + intercept
+  iptm_to_kd:
+    slope: null
+    intercept: null
+    r_squared: null
+  energy_to_kd:
+    slope: null
+    intercept: null
+    r_squared: null
+  # Bayesian optimization hyperparameters
+  bayesian_opt:
+    acquisition_function: "expected_improvement"
+    exploration_weight: 0.1
+    n_initial_points: 10

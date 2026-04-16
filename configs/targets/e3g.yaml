@@ -1,0 +1,80 @@
+# ============================================================================
+# NanoLFA-Design — E3G Target Configuration
+# ============================================================================
+# Estrone-3-glucuronide (E3G)
+# Primary estrogen metabolite in urine; predicts fertile window onset.
+#
+# Clinical context:
+#   - Urinary E3G rises 5-7 days before ovulation
+#   - Clinically relevant range: 20–80 ng/mL in urine
+#   - LFA cutoff typically ~40 ng/mL for fertile window detection
+# ============================================================================
+
+defaults:
+  - default
+
+target:
+  name: "e3g"
+  full_name: "Estrone-3-glucuronide"
+  cas: "2479-49-4"
+  mol_weight: 446.5
+  smiles: "O=C(O)[C@@H]1O[C@@H](Oc2ccc3c(c2)CC[C@@H]2[C@@H]3CC[C@]3(C)[C@@H](CC[C@@H]23)C(C)=O)[C@H](O)[C@@H](O)[C@@H]1O"
+  inchi_key: "QSLJBBHQXCMPRU-XUTVFYLZSA-N"
+
+  carrier_protein: "BSA"
+  linker_chemistry: "carbodiimide"
+  linker_attachment_atom: "C6_glucuronide_COOH"
+  linker_length_atoms: 6
+
+  assay_cutoff_ng_ml: 40.0
+  relevant_range_ng_ml: [20.0, 80.0]
+
+  cross_reactivity_panel:
+    - name: "estrone"
+      role: "aglycone"
+      smiles: "O=C1CCC2C3CCc4cc(O)ccc4C3CCC12C"
+      max_cross_reactivity_pct: 5.0
+    - name: "estradiol_3_glucuronide"
+      role: "hydroxylation_variant"
+      smiles: "O=C(O)C1OC(Oc2ccc3c(c2)CCC2C3CCC3(C)C(O)CCC23)C(O)C(O)C1O"
+      max_cross_reactivity_pct: 10.0
+    - name: "estriol_3_glucuronide"
+      role: "trihydroxy_variant"
+      smiles: "O=C(O)C1OC(Oc2ccc3c(c2)CCC2C3CC(O)C3(C)C(O)CCC23)C(O)C(O)C1O"
+      max_cross_reactivity_pct: 5.0
+    - name: "estradiol"
+      role: "parent_hormone"
+      smiles: "OC1CCC2C3CCc4cc(O)ccc4C3CCC12C"
+      max_cross_reactivity_pct: 3.0
+    - name: "estriol"
+      role: "triol"
+      smiles: "OC1CCC2C3CC(O)c4cc(O)ccc4C3CCC12C"
+      max_cross_reactivity_pct: 3.0
+    - name: "androsterone_glucuronide"
+      role: "androgen_metabolite"
+      smiles: "O=C(O)C1OC(OC2CCC3C4CCC5CC(=O)CCC5(C)C4CCC23C)C(O)C(O)C1O"
+      max_cross_reactivity_pct: 1.0
+
+scaffolds:
+  # E3G has a planar aromatic A-ring — shallower pocket may suffice
+  cdr3_length_range: [10, 18]
+  cdr3_aa_preferences:
+    W: 1.5                              # Trp for pi-stacking with A-ring
+    Y: 1.2                              # Tyr for H-bonding to glucuronide
+    F: 0.8
+    R: 0.5                              # Arg for glucuronide carboxylate salt bridge
+
+alphafold:
+  af3:
+    ligand_format: "sdf"
+    ligand_file: "data/targets/e3g/e3g_3d.sdf"
+
+scoring:
+  normalization_overrides:
+    buried_surface_area:
+      min: 180.0                        # E3G is slightly smaller than PdG
+      max: 550.0
+
+rfdiffusion:
+  contigs: "A120-140/0 B1-20"
+  hotspot_residues: null

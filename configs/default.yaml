@@ -1,0 +1,186 @@
+# ============================================================================
+# NanoLFA-Design — Master Configuration
+# ============================================================================
+# Override per-target settings in configs/targets/{target}.yaml
+# Override at CLI via Hydra: python run_pipeline.py pipeline.max_rounds=3
+# ============================================================================
+
+# --- Pipeline Control -------------------------------------------------------
+pipeline:
+  max_rounds: 5
+  variants_per_round: 300
+  top_k_advance: 50                     # candidates promoted to next round
+  top_k_experimental: 20                # candidates sent to wet lab
+  convergence_threshold: 0.02           # stop if best score delta < this
+  random_seed: 42
+  output_dir: "data/results"
+  log_level: "INFO"
+  experiment_tracker: "wandb"           # wandb | mlflow | none
+  wandb_project: "nanolfa-design"
+
+# --- Target Definition (overridden per target) ------------------------------
+target:
+  name: null                            # pdg | e3g
+  smiles: null                          # SMILES string of analyte
+  mol_weight: null                      # Da
+  carrier_protein: "BSA"                # BSA | KLH | OVA
+  linker_chemistry: "carbodiimide"      # carbodiimide | maleimide | glutaraldehyde
+  linker_length_atoms: 6                # spacer arm length
+  cross_reactivity_panel: []            # list of SMILES for off-targets
+
+# --- Nanobody Scaffolds ----------------------------------------------------
+scaffolds:
+  source: "imgt"                        # imgt | custom | pdb
+  species: "Vicugna pacos"              # alpaca germline preferred
+  min_frameworks: 10                    # minimum unique frameworks to sample
+  cdr_definition: "imgt"               # imgt | chothia | kabat
+  # CDR3 is primary diversification target; CDR1/CDR2 are secondary
+  diversify_cdrs: ["CDR3", "CDR2", "CDR1"]
+  cdr3_length_range: [8, 20]            # residues; nanobody CDR3 is typically long
+  framework_mutations_allowed: 0        # keep framework frozen initially
+
+# --- AlphaFold Configuration -----------------------------------------------
+alphafold:
+  version: "af3"                        # af3 | multimer_v2.3
+  install_path: "${oc.env:ALPHAFOLD_PATH,/opt/alphafold}"
+  database_path: "${oc.env:AF_DB_PATH,/data/alphafold_db}"
+
+  # Model inference
+  num_models: 5                         # AF2: models 1-5; AF3: diffusion samples
+  num_recycles: 12                      # more recycles = better but slower
+  num_seeds: 3                          # independent random seeds
+  max_template_date: "2025-01-01"
+  use_templates: true
+  use_amber_relax: true                 # AMBER relaxation of predicted structures
+  relax_max_iterations: 2000
+
+  # GPU settings
+  gpu_memory_gb: 80                     # A100 80GB; reduce for V100
+  num_gpus: 1                           # per prediction
+  batch_predictions: true               # batch multiple predictions per GPU
+
+  # AF3-specific (small-molecule mode)
+  af3:
+    diffusion_samples: 5
+    ligand_format: "sdf"                # sdf | mol2 | smiles
+    ccd_codes: null                     # CCD ligand codes if available
+
+  # Prescreening with ESMFold (fast, no MSA)
+  prescreening:
+    enabled: true
+    engine: "esmfold"
+    min_plddt_threshold: 60             # discard if overall pLDDT < this
+    top_k_to_full_af: 100               # send top-K from ESMFold to full AF
+
+# --- ProteinMPNN Configuration ---------------------------------------------
+proteinmpnn:
+  install_path: "${oc.env:PROTEINMPNN_PATH,/opt/ProteinMPNN}"
+  weights: "v_48_020"                   # model weights version
+  sampling_temperature: 0.1             # lower = more conservative designs
+  num_sequences: 100                    # sequences per backbone
+  num_batches: 1
+  backbone_noise: 0.02                  # Å; slight noise for diversity
+  cdr_only: true                        # redesign CDR loops only
+  fixed_positions: "framework"          # framework residues are frozen
+  # Amino acid biases (log-odds)
+  aa_bias:
+    C: -5.0                             # penalize Cys in CDRs (disulfide issues)
+    M: -2.0                             # penalize Met (oxidation in LFA)
+    N: -1.0                             # penalize Asn (deamidation risk)
+    D: -0.5                             # mild penalty for Asp (isomerization)
+
+# --- RFdiffusion Configuration ---------------------------------------------
+rfdiffusion:
+  install_path: "${oc.env:RFDIFFUSION_PATH,/opt/RFdiffusion}"
+  num_designs: 50
+  noise_scale: 1.0
+  diffusion_steps: 50
+  # Hotspot residues on target (set per target)
+  hotspot_residues: null
+  # Contigs: defines which parts are designed vs. fixed
+  # Set per target in target configs
+
+# --- Scoring Configuration -------------------------------------------------
+scoring:
+  # See configs/scoring.yaml for full details
+  weights:
+    iptm: 0.25
+    plddt_interface: 0.20
+    shape_complementarity: 0.15
+    binding_energy: 0.20
+    buried_surface_area: 0.10
+    developability: 0.10
+
+  # Energy rescoring engine
+  energy_engine: "rosetta"              # rosetta | foldx | both
+  rosetta:
+    scorefxn: "ref2015"
+    nstruct: 3                          # relax replicates
+    constrain_relax: true
+  foldx:
+    repair_pdb: true
+    number_of_runs: 5
+
+  # Interface distance cutoff
+  interface_distance_cutoff: 5.0        # Å; residues within this of partner
+
+# --- Developability Filters ------------------------------------------------
+filters:
+  # Aggregation
+  max_aggregation_score: 0.5            # Aggrescan3D or CamSol
+  aggregation_tool: "aggrescan3d"       # aggrescan3d | camsol
+
+  # Charge
+  cdr3_net_charge_range: [-2, 2]        # absolute charge limits
+  total_net_charge_range: [-5, 5]
+
+  # Hydrophobicity
+  max_cdr_hydrophobicity: 0.55          # Kyte-Doolittle mean
+
+  # Sequence liabilities
+  flag_motifs:
+    - "NG"                              # deamidation
+    - "NS"                              # deamidation
+    - "DG"                              # isomerization
+    - "DS"                              # isomerization
+    - "M"                               # oxidation (in exposed positions)
+    - "NX[ST]"                          # N-glycosylation (N-X-S/T)
+  max_liability_count: 2                # flag if more than this many
+
+  # Thermal stability (predicted Tm)
+  min_predicted_tm: 65.0                # °C; must survive LFA storage
+
+  # Humanness (for future therapeutic re-purposing)
+  min_humanness_score: 0.5              # OASis or T20 score
+
+# --- LFA-Specific Optimization ---------------------------------------------
+lfa:
+  # Kinetics
+  target_kon_min: 1.0e5                 # M⁻¹s⁻¹; fast on-rate needed
+  target_kd_max: 1.0e-8                 # M; sub-10nM affinity
+  flow_time_seconds: 60                 # analyte transit time
+
+  # Conjugation
+  conjugation_tag: "His6"               # His6 | SpyTag | sortase_LPETG | biotin
+  nanoparticle_diameter_nm: 40          # gold nanoparticle size
+  orientation_check: true               # verify paratope accessibility
+
+  # Stability
+  storage_temperature_c: 25
+  storage_humidity_rh: 60
+  target_shelf_life_months: 18
+
+  # Buffer compatibility
+  sample_matrix: "urine"
+  ph_range: [5.0, 8.0]                 # urine pH range
+  ionic_strength_mm: [50, 400]          # urine ionic strength range
+
+# --- Compute Resources ------------------------------------------------------
+compute:
+  scheduler: "slurm"                    # slurm | pbs | local
+  partition: "gpu"
+  gpus_per_node: 4
+  cpus_per_task: 8
+  memory_gb: 64
+  time_limit_hours: 24
+  container: null                       # singularity/apptainer image path

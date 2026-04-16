@@ -1,0 +1,91 @@
+# ============================================================================
+# NanoLFA-Design — PdG Target Configuration
+# ============================================================================
+# Pregnanediol-3-glucuronide (PdG)
+# Primary progesterone metabolite in urine; confirms ovulation.
+#
+# Clinical context:
+#   - Urinary PdG rises 24-48h after ovulation (LH surge)
+#   - Clinically relevant range: 2–10 µg/mL in urine
+#   - LFA cutoff typically ~5 µg/mL for ovulation confirmation
+# ============================================================================
+
+defaults:
+  - default                             # inherit from configs/default.yaml
+
+target:
+  name: "pdg"
+  full_name: "Pregnanediol-3-glucuronide"
+  cas: "1852-43-3"
+  mol_weight: 496.6
+  smiles: "O=C(O)[C@@H]1O[C@@H](O[C@@H]2CC[C@@H]3[C@H]4CC[C@@H]5C[C@H](O)CC[C@]5(C)[C@@H]4CC[C@]23C)[C@H](O)[C@@H](O)[C@@H]1O"
+  inchi_key: "MFYSYFVPBJMHGN-ZPOLXVRWSA-N"
+
+  # Carrier conjugate design
+  carrier_protein: "BSA"
+  linker_chemistry: "carbodiimide"      # EDC coupling via glucuronide carboxyl
+  linker_attachment_atom: "C1_glucuronide_COOH"
+  linker_length_atoms: 6
+
+  # Clinical assay parameters
+  assay_cutoff_ug_ml: 5.0
+  relevant_range_ug_ml: [2.0, 10.0]
+
+  # Cross-reactivity panel
+  # Each entry: {name, smiles, max_allowed_cross_reactivity_%}
+  cross_reactivity_panel:
+    - name: "pregnanediol"
+      role: "aglycone"
+      smiles: "O[C@@H]1CC[C@@H]2[C@H]3CC[C@@H]4C[C@H](O)CC[C@]4(C)[C@@H]3CC[C@]12C"
+      max_cross_reactivity_pct: 5.0
+    - name: "pregnanetriol"
+      role: "structural_analog"
+      smiles: "O[C@@H]1CC[C@@H]2[C@H]3C[C@H](O)[C@@H]4C[C@H](O)CC[C@]4(C)[C@@H]3CC[C@]12C"
+      max_cross_reactivity_pct: 5.0
+    - name: "pregnanolone_glucuronide"
+      role: "positional_isomer"
+      smiles: "O=C(O)[C@@H]1O[C@@H](O[C@@H]2CC[C@@H]3[C@H]4CC[C@@H]5CC(=O)CC[C@]5(C)[C@@H]4CC[C@]23C)[C@H](O)[C@@H](O)[C@@H]1O"
+      max_cross_reactivity_pct: 10.0
+    - name: "androsterone_glucuronide"
+      role: "androgen_metabolite"
+      smiles: "O=C(O)[C@@H]1O[C@@H](OC2CCC3C4CCC5CC(=O)CCC5(C)C4CCC23C)C(O)C(O)C1O"
+      max_cross_reactivity_pct: 2.0
+    - name: "cortisol"
+      role: "corticosteroid"
+      smiles: "OC(=O)CC(=O)C1CCC2C3CCC4=CC(=O)CCC4(C)C3C(O)CC12C"
+      max_cross_reactivity_pct: 1.0
+
+# --- Nanobody Design Parameters (PdG-specific) ----------------------------
+scaffolds:
+  # PdG is a steroid glucuronide — relatively bulky hapten
+  # Favor longer CDR3 to form a deep binding pocket
+  cdr3_length_range: [12, 20]
+  # Steroid binding often involves aromatic residues
+  # Bias ProteinMPNN toward Trp, Tyr, Phe in CDR3
+  cdr3_aa_preferences:
+    W: 1.5                              # log-odds boost for Trp
+    Y: 1.0                              # boost for Tyr
+    F: 0.8                              # boost for Phe
+
+# --- AlphaFold Overrides ---------------------------------------------------
+alphafold:
+  af3:
+    # PdG ligand — provide as SDF for AF3
+    ligand_format: "sdf"
+    ligand_file: "data/targets/pdg/pdg_3d.sdf"
+
+# --- Scoring Adjustments ---------------------------------------------------
+scoring:
+  # For hapten targets, buried surface area is naturally smaller
+  # Adjust normalization range
+  normalization_overrides:
+    buried_surface_area:
+      min: 200.0                        # Å²; hapten-appropriate
+      max: 600.0
+
+# --- RFdiffusion Overrides --------------------------------------------------
+rfdiffusion:
+  # Contig specification for nanobody around PdG
+  # A: nanobody (~120 residues), B: PdG-BSA epitope region
+  contigs: "A120-140/0 B1-20"
+  hotspot_residues: null                # determined after Phase 1

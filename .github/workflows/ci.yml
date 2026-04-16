@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-type:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install dev dependencies
+        run: pip install ruff mypy omegaconf pyyaml
+      - name: Lint
+        run: ruff check src/ scripts/ tests/
+      - name: Type check
+        run: mypy src/nanolfa/ --ignore-missing-imports
+
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install package
+        run: |
+          pip install -e ".[dev]"
+          pip install omegaconf biopython
+      - name: Run tests
+        run: pytest tests/ -v --tb=short -k "not alphafold and not rosetta"
+
+  config-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+      - name: Install dependencies
+        run: pip install omegaconf pyyaml
+      - name: Validate configs
+        run: |
+          python -c "
+          from omegaconf import OmegaConf
+          for f in ['configs/default.yaml', 'configs/scoring.yaml']:
+              cfg = OmegaConf.load(f)
+              print(f'✓ {f} is valid YAML')
+          print('All configs validated.')
+          "

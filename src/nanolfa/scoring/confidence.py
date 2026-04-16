@@ -1,0 +1,1 @@
+"""AlphaFold confidence metric extraction."""

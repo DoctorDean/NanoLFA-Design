@@ -1,0 +1,71 @@
+# ============================================================================
+# Dependabot configuration
+# ============================================================================
+# Automatically opens pull requests to update dependencies on a schedule.
+# Keeps the scientific stack current without manual babysitting.
+# ============================================================================
+
+version: 2
+updates:
+
+  # --- Python dependencies (pip) ---
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "DoctorDean/platform"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+    # Group minor/patch updates to reduce PR noise
+    groups:
+      scientific-stack:
+        patterns:
+          - "numpy"
+          - "scipy"
+          - "pandas"
+          - "scikit-learn"
+        update-types:
+          - "minor"
+          - "patch"
+      dev-tooling:
+        patterns:
+          - "ruff"
+          - "mypy"
+          - "pytest*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Pin AlphaFold, PyTorch, JAX to manual updates — version bumps here
+    # often break CUDA compatibility and require full pipeline revalidation
+    ignore:
+      - dependency-name: "torch"
+      - dependency-name: "tensorflow"
+      - dependency-name: "jax"
+      - dependency-name: "jaxlib"
+      - dependency-name: "dm-haiku"
+      - dependency-name: "alphafold"
+      - dependency-name: "openmm"
+      - dependency-name: "rosettacommons-pyrosetta"
+
+  # --- GitHub Actions ---
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "DoctorDean/platform"
+    labels:
+      - "dependencies"
+      - "ci"
+    commit-message:
+      prefix: "chore(ci)"

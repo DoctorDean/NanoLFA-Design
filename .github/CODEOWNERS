@@ -1,0 +1,40 @@
+# CODEOWNERS for NanoLFA-Design
+# ============================================================================
+# Defines who is automatically requested for review on PRs that touch specific
+# paths. Replace the placeholder handles with actual GitHub usernames or teams
+# before this file takes effect.
+#
+# Syntax: <path pattern>    <reviewer(s)>
+# Patterns are gitignore-style. Later lines override earlier ones.
+# ============================================================================
+
+# Global fallback — every PR requires at least one of these reviewers
+*                               @DoctorDean/maintainers
+
+# Scoring function — requires computational biology lead review
+src/nanolfa/scoring/            @DoctorDean/compbio-leads
+configs/scoring.yaml            @DoctorDean/compbio-leads
+docs/SCORING.md                 @DoctorDean/compbio-leads
+docs/THRESHOLDS.md              @DoctorDean/compbio-leads
+
+# Model wrappers (AlphaFold, ProteinMPNN, ESMFold) — structure prediction team
+src/nanolfa/models/             @DoctorDean/structure-team
+
+# Developability and LFA-specific code — requires assay/formulation expertise
+src/nanolfa/filters/            @DoctorDean/assay-team
+src/nanolfa/lfa/                @DoctorDean/assay-team
+
+# Target definitions — requires medicinal chemistry review
+configs/targets/                @DoctorDean/chemistry-leads
+
+# CI and build configuration — platform team
+/.github/                       @DoctorDean/platform
+/pyproject.toml                 @DoctorDean/platform
+/environment.yml                @DoctorDean/platform
+/requirements.txt               @DoctorDean/platform
+/Makefile                       @DoctorDean/platform
+
+# Documentation — docs team + relevant code owners above
+/docs/                          @DoctorDean/docs
+/README.md                      @DoctorDean/docs
+/CHANGELOG.md                   @DoctorDean/maintainers
