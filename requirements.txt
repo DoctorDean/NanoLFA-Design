@@ -14,7 +14,7 @@ pandas==2.2.2
 # --- Structural Biology ----------------------------------------------------
 biopython==1.83
 biotite==0.41.0
-prody==2.4.1
+prody==2.6.1
 pdbfixer==1.9
 
 # --- Molecular Modeling & Energy -------------------------------------------
