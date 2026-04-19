@@ -63,6 +63,26 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Phase 1 notebook** (`notebooks/01_target_preparation.ipynb`): interactive
   walkthrough with 2D visualization, property radar charts, SASA distribution
   plots, pharmacophore comparison, and design implications for Phase 2
+- **VHH sequence utilities** (`src/nanolfa/utils/sequence.py`): IMGT region
+  annotation, VHH hallmark residue validation (positions 37/44/45/47),
+  canonical disulfide verification, greedy leader-follower sequence
+  clustering, and a bundled library of 10 representative VHH germline
+  scaffolds from alpaca and dromedary (curated from IMGT/PDB)
+- **Germline scaffold curation CLI** (`scripts/setup/fetch_imgt_germlines.py`):
+  loads bundled or user-provided VHH sequences, validates VHH hallmarks,
+  clusters by framework identity, exports FASTA + JSON with per-scaffold
+  region annotation and validation reports
+- **Enhanced ESMFold prescreening** (`src/nanolfa/models/esmfold.py`):
+  per-IMGT-region pLDDT breakdown (FR1/CDR1/.../FR4), CDR confidence
+  ratio metric (CDR pLDDT / framework pLDDT), PDB output for predicted
+  structures, dedicated `screen_scaffolds()` method for Phase 2 evaluation
+- **Phase 2 notebook** (`notebooks/02_seed_generation.ipynb`): germline
+  library loading, VHH validation scoring with bar charts, CDR3 length
+  distribution, framework clustering, ESMFold screening with per-region
+  heatmap and CDR confidence ratio plot
+- **Sequence utility tests** (`tests/test_sequence.py`): 15 tests covering
+  region annotation, VHH validation, clustering, bundled germline loading,
+  and library curation
 
 ### Fixed (post-0.1.0)
 
@@ -91,8 +111,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - ~~Phase 1 implementation: target preparation scripts with RDKit/OpenBabel integration~~ ✅
 - ~~Hapten–carrier conjugate builder for BSA/KLH linker modeling~~ ✅
-- Germline VHH scaffold library (curated from IMGT, >200 unique frameworks)
-- ESMFold fast pre-screening module for rapid variant triage
+- ~~Germline VHH scaffold library (curated from IMGT, >200 unique frameworks)~~ ✅
+- ~~ESMFold fast pre-screening module for rapid variant triage~~ ✅
 
 ### Planned for v0.3.0
 

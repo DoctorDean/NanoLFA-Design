@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.10"
 authors = [
-    {name = "Computational Biology Team"},
+    {name = "DoctorDean"},
 ]
 keywords = [
     "nanobody",
@@ -73,6 +73,8 @@ hpc = [
 nanolfa = "nanolfa.core.pipeline:main"
 
 [project.urls]
+Repository = "https://github.com/DoctorDean/nanobody-lfa-design"
+Documentation = "https://github.com/DoctorDean/nanobody-lfa-design/tree/main/docs"
 
 [tool.setuptools.packages.find]
 where = ["src"]
