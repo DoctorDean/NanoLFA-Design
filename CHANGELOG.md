@@ -51,6 +51,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Phase 1 target preparation** (`src/nanolfa/utils/chemistry.py`):
+  ETKDG v3 conformer generation with MMFF94/UFF minimization, SDF/PDB/MOL2
+  export, molecular property computation, per-atom SASA epitope mapping with
+  linker occlusion modeling, and pharmacophore feature extraction
+- **Target preparation CLI** (`scripts/prepare_targets.py`): multi-target
+  support, configurable conformer count and force field, cross-reactant
+  panel processing, JSON summary output
+- **Phase 1 notebook** (`notebooks/01_target_preparation.ipynb`): interactive
+  walkthrough with 2D visualization, property radar charts, SASA distribution
+  plots, pharmacophore comparison, and design implications for Phase 2
+
 ### Fixed (post-0.1.0)
 
 - Resolve all ruff violations from initial CI run (unused imports, legacy
@@ -76,8 +89,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Planned for v0.2.0
 
-- Phase 1 implementation: target preparation scripts with RDKit/OpenBabel integration
-- Hapten–carrier conjugate builder for BSA/KLH linker modeling
+- ~~Phase 1 implementation: target preparation scripts with RDKit/OpenBabel integration~~ ✅
+- ~~Hapten–carrier conjugate builder for BSA/KLH linker modeling~~ ✅
 - Germline VHH scaffold library (curated from IMGT, >200 unique frameworks)
 - ESMFold fast pre-screening module for rapid variant triage
 

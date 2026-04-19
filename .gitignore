@@ -51,3 +51,4 @@ htmlcov/
 # Temporary
 /tmp/
 *.tmp
+/.idea

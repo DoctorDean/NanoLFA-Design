@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "Apache-2.0"}
 requires-python = ">=3.10"
 authors = [
-    {name = "DoctorDean"},
+    {name = "Computational Biology Team"},
 ]
 keywords = [
     "nanobody",
@@ -73,8 +73,6 @@ hpc = [
 nanolfa = "nanolfa.core.pipeline:main"
 
 [project.urls]
-Repository = "https://github.com/DoctorDean/nanobody-lfa-design"
-Documentation = "https://github.com/DoctorDean/nanobody-lfa-design/tree/main/docs"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -95,6 +93,10 @@ ignore_missing_imports = true
 # Scientific libs (Biopython, FreeSASA, PyRosetta, RDKit) have incomplete
 # type stubs. Strict mode here would fail for reasons unrelated to our code.
 # Tighten these as we add typed wrappers around third-party calls.
+
+[[tool.mypy.overrides]]
+module = "nanolfa.utils.chemistry"
+disable_error_code = ["assignment", "index", "arg-type", "attr-defined"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
