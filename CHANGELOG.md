@@ -100,6 +100,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Phase 3 notebook** (`notebooks/03_design_loop.ipynb`): scoring function
   visualization, simulated 5-round design loop with convergence analysis,
   per-metric distribution box plots, W&B tracking demo, HPC submission
+- **Cross-reactivity screening** (`src/nanolfa/filters/specificity.py`):
+  rewritten with full AF3 off-target prediction integration, per-compound
+  contact analysis, three-tier classification (specific/borderline/cross-
+  reactive), negative-design rescue pathway for borderline candidates,
+  and comprehensive reporting (TSV, JSON, cross-reactivity matrix)
+- **Screening CLI** (`scripts/screen_crossreactivity.py`): rewritten with
+  `--rescue` flag for negative-design rescue, detailed terminal summary
+  with tier counts and top candidate listing
+- **Phase 4 notebook** (`notebooks/04_specificity_analysis.ipynb`):
+  simulated cross-reactivity data, heatmap of candidate-by-compound
+  scores, selectivity ratio analysis, on-target vs off-target scatter
+  plot with selectivity contours, per-compound box plots, negative
+  design concept walkthrough
 
 ### Fixed (post-0.1.0)
 
@@ -139,7 +152,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Planned for v0.4.0
 
-- Phase 4 cross-reactivity screening with automated negative-design constraints
+- ~~Phase 4 cross-reactivity screening with automated negative-design constraints~~ ✅
 - Phase 5 LFA optimization with gold nanoparticle conjugation modeling
 - Phase 6 experimental data ingestion and Bayesian score recalibration
 
