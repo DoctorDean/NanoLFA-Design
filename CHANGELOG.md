@@ -83,6 +83,23 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Sequence utility tests** (`tests/test_sequence.py`): 15 tests covering
   region annotation, VHH validation, clustering, bundled germline loading,
   and library curation
+- **RFdiffusion wrapper** (`src/nanolfa/models/rfdiffusion.py`): CDR3
+  backbone generation with IMGT-aware contig specification, target-guided
+  diffusion with hotspot residues, and batch scaffold processing
+- **HPC job manager** (`src/nanolfa/core/hpc.py`): Slurm and PBS job
+  submission with sbatch/qsub script generation, dependency chaining,
+  job arrays, Singularity container wrapping, status polling, and
+  multi-job wait
+- **Experiment tracking** (`src/nanolfa/core/tracking.py`): Weights &
+  Biases integration for per-round metrics, candidate score tables,
+  convergence curves, and artifact uploads; graceful no-op fallback
+- **Structured logging** (`src/nanolfa/core/logging.py`): per-round log
+  file rotation and HPC-friendly formatting
+- **Slurm job templates** (`configs/hpc/`): single-round and full-pipeline
+  templates with environment variable injection
+- **Phase 3 notebook** (`notebooks/03_design_loop.ipynb`): scoring function
+  visualization, simulated 5-round design loop with convergence analysis,
+  per-metric distribution box plots, W&B tracking demo, HPC submission
 
 ### Fixed (post-0.1.0)
 
@@ -116,9 +133,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Planned for v0.3.0
 
-- Phase 3 iterative loop: full automation of predict → score → diversify → re-rank cycle
-- Slurm/PBS job submission templates for HPC clusters
-- Weights & Biases integration for experiment tracking
+- ~~Phase 3 iterative loop: full automation of predict → score → diversify → re-rank cycle~~ ✅
+- ~~Slurm/PBS job submission templates for HPC clusters~~ ✅
+- ~~Weights & Biases integration for experiment tracking~~ ✅
 
 ### Planned for v0.4.0
 
