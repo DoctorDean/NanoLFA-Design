@@ -113,6 +113,21 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   scores, selectivity ratio analysis, on-target vs off-target scatter
   plot with selectivity contours, per-compound box plots, negative
   design concept walkthrough
+- **Kinetic accessibility module** (`src/nanolfa/lfa/kinetics.py`):
+  ray-casting pocket openness, CDR rigidity from pLDDT, charge
+  complementarity at interface, composite kon estimation with
+  expected binding fraction at LFA flow time
+- **Thermal stability module** (`src/nanolfa/lfa/stability.py`):
+  sequence-based Tm/Tagg prediction from amino acid composition,
+  CDR3 flexibility penalty, free cysteine and methionine risk scoring
+- **LFA compatibility filter** (`src/nanolfa/filters/lfa_compat.py`):
+  unified gate combining kinetics, orientation, and stability with
+  composite LFA score and batch filtering
+- **LFA optimization CLI** (`scripts/optimize_lfa.py`): evaluates
+  candidates for LFA deployment suitability with detailed TSV output
+- **Phase 5 notebook** (`notebooks/05_lfa_optimization.ipynb`):
+  thermal stability bar charts, conjugation orientation scatter plot,
+  kinetic accessibility stacked components, combined LFA pass/fail table
 
 ### Fixed (post-0.1.0)
 
@@ -153,7 +168,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Planned for v0.4.0
 
 - ~~Phase 4 cross-reactivity screening with automated negative-design constraints~~ ✅
-- Phase 5 LFA optimization with gold nanoparticle conjugation modeling
+- ~~Phase 5 LFA optimization with gold nanoparticle conjugation modeling~~ ✅
 - Phase 6 experimental data ingestion and Bayesian score recalibration
 
 ### Planned for v1.0.0
