@@ -7,7 +7,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.1.0] — 2026-04-14
+## [0.4.0] — 2026-04-21
 
 ### Added
 
@@ -128,6 +128,19 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Phase 5 notebook** (`notebooks/05_lfa_optimization.ipynb`):
   thermal stability bar charts, conjugation orientation scatter plot,
   kinetic accessibility stacked components, combined LFA pass/fail table
+- **Experimental calibration module** (`src/nanolfa/core/calibration.py`):
+  CSV ingestion for SPR kinetics, thermal shift, and LFA prototype data;
+  per-metric Pearson/Spearman correlation analysis vs experimental log(KD);
+  ridge regression weight recalibration with cross-validation; correlation-
+  based recalibration fallback; hidden gem detection via re-ranking;
+  calibration JSON export for config update
+- **Experimental ingestion CLI** (`scripts/ingest_experimental.py`):
+  step-by-step workflow with correlation table, weight change summary,
+  hidden gem listing, and calibration JSON output
+- **Phase 6 notebook** (`notebooks/06_experimental_feedback.ipynb`):
+  simulated experimental data, metric-vs-log(KD) scatter plots with
+  regression lines, weight recalibration comparison bar chart, correlation
+  strength ranking, hidden gem rank-change arrow visualization
 
 ### Fixed (post-0.1.0)
 
@@ -169,7 +182,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - ~~Phase 4 cross-reactivity screening with automated negative-design constraints~~ ✅
 - ~~Phase 5 LFA optimization with gold nanoparticle conjugation modeling~~ ✅
-- Phase 6 experimental data ingestion and Bayesian score recalibration
+- ~~Phase 6 experimental data ingestion and Bayesian score recalibration~~ ✅
 
 ### Planned for v1.0.0
 
