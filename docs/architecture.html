@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NanoLFA-Design — Pipeline Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: #0a0e17;
+    color: #c8d6e5;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    background: linear-gradient(180deg, #0a0e17 60%, transparent);
+    padding: 18px 28px 30px;
+  }
+  .header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #e2e8f0;
+    letter-spacing: 0.5px;
+  }
+  .header h1 span { color: #60a5fa; }
+  .header .subtitle {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.3px;
+  }
+
+  /* Legend */
+  .legend {
+    position: fixed;
+    bottom: 16px; left: 16px;
+    z-index: 100;
+    background: rgba(15, 23, 42, 0.9);
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 11px;
+    backdrop-filter: blur(8px);
+  }
+  .legend-title {
+    font-weight: 600;
+    color: #94a3b8;
+    margin-bottom: 8px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0;
+    color: #94a3b8;
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .legend-line {
+    width: 20px; height: 2px;
+    flex-shrink: 0;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    z-index: 200;
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 14px 18px;
+    max-width: 360px;
+    font-size: 12px;
+    line-height: 1.5;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip .tt-title {
+    font-weight: 600;
+    font-size: 13px;
+    color: #e2e8f0;
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .tooltip .tt-path {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #60a5fa;
+    margin-bottom: 8px;
+  }
+  .tooltip .tt-desc { color: #94a3b8; }
+  .tooltip .tt-io {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #1e293b;
+  }
+  .tooltip .tt-io-label {
+    font-weight: 500;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+  .tooltip .tt-io-label.input { color: #34d399; }
+  .tooltip .tt-io-label.output { color: #f97316; }
+  .tooltip .tt-io-item {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #cbd5e1;
+    padding-left: 8px;
+  }
+
+  /* Controls */
+  .controls {
+    position: fixed;
+    top: 16px; right: 16px;
+    z-index: 100;
+    display: flex;
+    gap: 6px;
+  }
+  .controls button {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid #334155;
+    color: #94a3b8;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+    backdrop-filter: blur(8px);
+  }
+  .controls button:hover {
+    background: rgba(51, 65, 85, 0.8);
+    color: #e2e8f0;
+  }
+  .controls button.active {
+    background: rgba(96, 165, 250, 0.2);
+    border-color: #60a5fa;
+    color: #60a5fa;
+  }
+
+  canvas { display: block; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>NanoLFA-Design</span> — Pipeline Architecture</h1>
+  <div class="subtitle">Interactive network diagram · hover nodes for details · drag to pan · scroll to zoom</div>
+</div>
+
+<div class="controls">
+  <button onclick="resetView()">Reset View</button>
+  <button id="btn-phase" class="active" onclick="toggleFilter('phase')">By Phase</button>
+  <button id="btn-type" onclick="toggleFilter('type')">By Type</button>
+</div>
+
+<div class="legend">
+  <div class="legend-title">Node Types</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#60a5fa"></div>Core module</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#34d399"></div>Script / CLI</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>Config</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a78bfa"></div>Model wrapper</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f472b6"></div>Filter</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>Data / Output</div>
+  <div style="margin-top:8px">
+    <div class="legend-title">Edges</div>
+    <div class="legend-item"><div class="legend-line" style="background:#334155"></div>Data flow</div>
+    <div class="legend-item"><div class="legend-line" style="background:#60a5fa"></div>Imports / uses</div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const tooltip = document.getElementById('tooltip');
+
+let W, H, dpr;
+let panX = 0, panY = 0, zoom = 1;
+let dragging = false, dragStartX, dragStartY;
+let hoveredNode = null;
+let colorMode = 'phase';
+
+function resize() {
+  dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', () => { resize(); draw(); });
+resize();
+
+// ── Node definitions ──────────────────────────────────────────────
+const nodes = [
+  // Phase 1
+  { id: 'chemistry', label: 'chemistry.py', phase: 1, type: 'core', x: 120, y: 180,
+    path: 'src/nanolfa/utils/chemistry.py',
+    desc: 'Conformer generation, epitope mapping, pharmacophore extraction',
+    inputs: ['SMILES (from config)', 'Target YAML'],
+    outputs: ['SDF/PDB structures', 'Epitope surface map JSON', 'Pharmacophore features'] },
+  { id: 'prepare_targets', label: 'prepare_targets.py', phase: 1, type: 'script', x: 120, y: 290,
+    path: 'scripts/prepare_targets.py',
+    desc: 'CLI: Phase 1 target preparation',
+    inputs: ['configs/targets/{pdg,e3g}.yaml'],
+    outputs: ['data/targets/{name}/structures/', 'preparation_summary.json'] },
+  { id: 'pdg_config', label: 'pdg.yaml', phase: 1, type: 'config', x: 10, y: 230,
+    path: 'configs/targets/pdg.yaml',
+    desc: 'PdG target config: SMILES, cross-reactivity panel, CDR3 preferences',
+    inputs: ['default.yaml (inheritance)'],
+    outputs: ['Target definition for all phases'] },
+  { id: 'e3g_config', label: 'e3g.yaml', phase: 1, type: 'config', x: 10, y: 310,
+    path: 'configs/targets/e3g.yaml',
+    desc: 'E3G target config: SMILES, cross-reactivity panel, CDR3 preferences',
+    inputs: ['default.yaml (inheritance)'],
+    outputs: ['Target definition for all phases'] },
+
+  // Phase 2
+  { id: 'sequence', label: 'sequence.py', phase: 2, type: 'core', x: 350, y: 140,
+    path: 'src/nanolfa/utils/sequence.py',
+    desc: 'VHH sequence utilities: IMGT annotation, hallmark validation, clustering, bundled germlines',
+    inputs: ['VHH sequences (FASTA or bundled)'],
+    outputs: ['GermlineScaffold objects', 'Curated scaffold library'] },
+  { id: 'esmfold', label: 'esmfold.py', phase: 2, type: 'model', x: 350, y: 250,
+    path: 'src/nanolfa/models/esmfold.py',
+    desc: 'ESMFold prescreening: per-region pLDDT, CDR confidence ratio, PDB output',
+    inputs: ['Nanobody sequences'],
+    outputs: ['ESMFoldResult (per-region pLDDT)', 'Predicted PDBs', 'Filtered candidate list'] },
+  { id: 'fetch_germlines', label: 'fetch_imgt_germlines.py', phase: 2, type: 'script', x: 350, y: 350,
+    path: 'scripts/setup/fetch_imgt_germlines.py',
+    desc: 'CLI: scaffold library curation from bundled or custom FASTA',
+    inputs: ['Bundled germlines or user FASTA'],
+    outputs: ['data/templates/germline_vhh/scaffolds.fasta', 'scaffolds.json'] },
+
+  // Phase 3
+  { id: 'pipeline', label: 'pipeline.py', phase: 3, type: 'core', x: 600, y: 200,
+    path: 'src/nanolfa/core/pipeline.py',
+    desc: 'Master orchestrator: iterative predict→score→diversify→filter loop with convergence detection',
+    inputs: ['Seed FASTA', 'Target config', 'Scoring config'],
+    outputs: ['Per-round FASTA + TSV', 'Final top-K candidates'] },
+  { id: 'alphafold', label: 'alphafold.py', phase: 3, type: 'model', x: 530, y: 100,
+    path: 'src/nanolfa/models/alphafold.py',
+    desc: 'AF3/AF-Multimer wrapper: complex prediction, output parsing, batch submission',
+    inputs: ['Nanobody sequence + target SDF/SMILES'],
+    outputs: ['Predicted complex PDBs', 'ipTM, pTM, pLDDT'] },
+  { id: 'proteinmpnn', label: 'proteinmpnn.py', phase: 3, type: 'model', x: 670, y: 100,
+    path: 'src/nanolfa/models/proteinmpnn.py',
+    desc: 'CDR sequence design: fixed-backbone, AA biases, temperature-scheduled sampling',
+    inputs: ['Backbone PDB', 'Fixed positions JSON'],
+    outputs: ['Designed sequences FASTA', 'Mutation lists'] },
+  { id: 'rfdiffusion', label: 'rfdiffusion.py', phase: 3, type: 'model', x: 600, y: 50,
+    path: 'src/nanolfa/models/rfdiffusion.py',
+    desc: 'CDR3 backbone generation: IMGT-aware contigs, target-guided diffusion',
+    inputs: ['Scaffold PDB', 'CDR3 length range'],
+    outputs: ['Designed backbone PDBs', 'Self-consistency scores'] },
+  { id: 'composite', label: 'composite.py', phase: 3, type: 'core', x: 750, y: 200,
+    path: 'src/nanolfa/scoring/composite.py',
+    desc: '6-metric composite scoring: ipTM, pLDDT, Sc, ΔG, BSA, developability',
+    inputs: ['Predicted complex PDB'],
+    outputs: ['Composite score [0-1]', 'Per-metric scores'] },
+  { id: 'developability', label: 'developability.py', phase: 3, type: 'filter', x: 750, y: 310,
+    path: 'src/nanolfa/filters/developability.py',
+    desc: 'Aggregation, charge, hydrophobicity, liabilities, Tm prediction',
+    inputs: ['Candidate sequence (+ optional structure)'],
+    outputs: ['DevelopabilityReport', 'Pass/fail + composite dev score'] },
+  { id: 'scoring_config', label: 'scoring.yaml', phase: 3, type: 'config', x: 850, y: 140,
+    path: 'configs/scoring.yaml',
+    desc: 'Scoring weights, normalization ranges, decision thresholds, calibration params',
+    inputs: ['calibration.json (Phase 6 update)'],
+    outputs: ['Weights + thresholds for CompositeScorer'] },
+  { id: 'run_pipeline', label: 'run_pipeline.py', phase: 3, type: 'script', x: 600, y: 350,
+    path: 'scripts/run_pipeline.py',
+    desc: 'CLI: full multi-round pipeline execution',
+    inputs: ['Target config YAML', '--rounds', '--seed-fasta'],
+    outputs: ['data/results/round_XX/ (per-round outputs)'] },
+  { id: 'run_round', label: 'run_design_round.py', phase: 3, type: 'script', x: 720, y: 380,
+    path: 'scripts/run_design_round.py',
+    desc: 'CLI: single design round (for HPC job submission)',
+    inputs: ['--target', '--round', '--input FASTA'],
+    outputs: ['top_candidates.fasta', 'scores.tsv'] },
+
+  // Phase 4
+  { id: 'specificity', label: 'specificity.py', phase: 4, type: 'filter', x: 950, y: 230,
+    path: 'src/nanolfa/filters/specificity.py',
+    desc: 'Cross-reactivity screening: AF3 off-target prediction, negative design rescue, contact analysis',
+    inputs: ['Candidates + cross-reactivity panel'],
+    outputs: ['SpecificityResult (tier: specific/borderline/cross-reactive)', 'Cross-reactivity matrix TSV'] },
+  { id: 'screen_cr', label: 'screen_crossreactivity.py', phase: 4, type: 'script', x: 950, y: 350,
+    path: 'scripts/screen_crossreactivity.py',
+    desc: 'CLI: Phase 4 specificity screening with optional --rescue',
+    inputs: ['Candidate FASTA', 'Target config YAML'],
+    outputs: ['specificity_results.tsv', 'specificity_details.json', 'cross_reactivity_matrix.tsv'] },
+
+  // Phase 5
+  { id: 'kinetics', label: 'kinetics.py', phase: 5, type: 'core', x: 1100, y: 140,
+    path: 'src/nanolfa/lfa/kinetics.py',
+    desc: 'Kinetic accessibility: pocket openness (ray-casting), CDR rigidity, charge complementarity',
+    inputs: ['Predicted complex PDB'],
+    outputs: ['KineticProfile (relative kon, binding fraction)'] },
+  { id: 'orientation', label: 'orientation.py', phase: 5, type: 'core', x: 1100, y: 220,
+    path: 'src/nanolfa/lfa/orientation.py',
+    desc: 'Conjugation geometry: paratope-NP angle, clearance, tag accessibility',
+    inputs: ['Nanobody PDB', 'NP radius', 'Tag location'],
+    outputs: ['OrientationResult (angle, clearance, pass/fail)'] },
+  { id: 'stability', label: 'stability.py', phase: 5, type: 'core', x: 1100, y: 300,
+    path: 'src/nanolfa/lfa/stability.py',
+    desc: 'Thermal stability: sequence-based Tm/Tagg prediction',
+    inputs: ['Nanobody sequence'],
+    outputs: ['StabilityProfile (Tm, Tagg, pass/fail)'] },
+  { id: 'lfa_compat', label: 'lfa_compat.py', phase: 5, type: 'filter', x: 1220, y: 220,
+    path: 'src/nanolfa/filters/lfa_compat.py',
+    desc: 'Unified LFA gate: kinetics + orientation + stability → composite LFA score',
+    inputs: ['Candidate + complex PDB'],
+    outputs: ['LFACompatibilityResult (passes_all, lfa_score)'] },
+  { id: 'optimize_lfa', label: 'optimize_lfa.py', phase: 5, type: 'script', x: 1160, y: 380,
+    path: 'scripts/optimize_lfa.py',
+    desc: 'CLI: Phase 5 LFA compatibility screening',
+    inputs: ['Candidate FASTA', 'Target config', '--complex-dir'],
+    outputs: ['lfa_compatibility.tsv'] },
+
+  // Phase 6
+  { id: 'calibration', label: 'calibration.py', phase: 6, type: 'core', x: 1380, y: 200,
+    path: 'src/nanolfa/core/calibration.py',
+    desc: 'Experimental data ingestion, correlation analysis, ridge regression recalibration, hidden gem detection',
+    inputs: ['SPR CSV', 'Thermal CSV', 'LFA CSV', 'scores.tsv'],
+    outputs: ['calibration.json (new weights)', 'Hidden gem list'] },
+  { id: 'ingest_exp', label: 'ingest_experimental.py', phase: 6, type: 'script', x: 1380, y: 330,
+    path: 'scripts/ingest_experimental.py',
+    desc: 'CLI: Phase 6 experimental feedback integration',
+    inputs: ['--spr CSV', '--thermal CSV', '--lfa CSV', '--scores TSV'],
+    outputs: ['calibration.json', 'Recalibrated weights summary'] },
+  { id: 'exp_data', label: 'Experimental Data', phase: 6, type: 'data', x: 1380, y: 100,
+    path: 'data/experimental/',
+    desc: 'Wet-lab characterization: SPR kinetics (KD, kon, koff), thermal shift (Tm, Tagg), LFA prototype (SNR)',
+    inputs: ['SPR/BLI instrument', 'Thermal shift assay', 'LFA prototype'],
+    outputs: ['spr_kinetics.csv', 'thermal_shift.csv', 'lfa_signal.csv'] },
+
+  // Infrastructure
+  { id: 'hpc', label: 'hpc.py', phase: 0, type: 'core', x: 480, y: 440,
+    path: 'src/nanolfa/core/hpc.py',
+    desc: 'Slurm/PBS/local job submission, dependency chaining, status polling',
+    inputs: ['Command + resource config'],
+    outputs: ['HPCJob (job_id, status, stdout/stderr paths)'] },
+  { id: 'tracking', label: 'tracking.py', phase: 0, type: 'core', x: 620, y: 470,
+    path: 'src/nanolfa/core/tracking.py',
+    desc: 'W&B experiment tracking: per-round metrics, candidate tables, artifacts',
+    inputs: ['RoundResult, Candidate lists'],
+    outputs: ['W&B dashboard (live)', 'Logged artifacts'] },
+  { id: 'config', label: 'config.py', phase: 0, type: 'core', x: 350, y: 440,
+    path: 'src/nanolfa/core/config.py',
+    desc: 'YAML config loading with inheritance and validation',
+    inputs: ['YAML config path'],
+    outputs: ['Validated DictConfig'] },
+  { id: 'default_config', label: 'default.yaml', phase: 0, type: 'config', x: 200, y: 430,
+    path: 'configs/default.yaml',
+    desc: 'Master config: pipeline params, AF settings, MPNN params, scoring, filters, LFA, compute',
+    inputs: [],
+    outputs: ['Base config for all target configs'] },
+  { id: 'docker', label: 'Dockerfile', phase: 0, type: 'script', x: 780, y: 470,
+    path: 'Dockerfile + docker-compose.yml',
+    desc: 'Multi-stage build: core (CPU, 3GB) → gpu (12GB) → full (25GB)',
+    inputs: ['Source code', 'environment.yml'],
+    outputs: ['nanolfa:core', 'nanolfa:gpu', 'nanolfa:full'] },
+  { id: 'smoke_test', label: 'docker_smoke_test.py', phase: 0, type: 'script', x: 900, y: 440,
+    path: 'scripts/docker_smoke_test.py',
+    desc: 'Synthetic end-to-end validation: all 6 phases without GPU',
+    inputs: ['(none — self-contained)'],
+    outputs: ['Pass/fail for each phase'] },
+];
+
+// ── Edge definitions ──────────────────────────────────────────────
+const edges = [
+  // Phase 1 internal
+  { from: 'pdg_config', to: 'prepare_targets', type: 'data' },
+  { from: 'e3g_config', to: 'prepare_targets', type: 'data' },
+  { from: 'prepare_targets', to: 'chemistry', type: 'uses' },
+
+  // Phase 1 → Phase 2
+  { from: 'chemistry', to: 'sequence', type: 'data', label: 'epitope map' },
+
+  // Phase 2 internal
+  { from: 'sequence', to: 'esmfold', type: 'data' },
+  { from: 'sequence', to: 'fetch_germlines', type: 'uses' },
+
+  // Phase 2 → Phase 3
+  { from: 'esmfold', to: 'pipeline', type: 'data', label: 'filtered seeds' },
+  { from: 'fetch_germlines', to: 'pipeline', type: 'data', label: 'scaffolds.fasta' },
+
+  // Phase 3 internal
+  { from: 'pipeline', to: 'alphafold', type: 'uses' },
+  { from: 'pipeline', to: 'proteinmpnn', type: 'uses' },
+  { from: 'pipeline', to: 'composite', type: 'uses' },
+  { from: 'pipeline', to: 'developability', type: 'uses' },
+  { from: 'pipeline', to: 'esmfold', type: 'uses' },
+  { from: 'rfdiffusion', to: 'proteinmpnn', type: 'data', label: 'backbones' },
+  { from: 'alphafold', to: 'composite', type: 'data', label: 'complex PDBs' },
+  { from: 'scoring_config', to: 'composite', type: 'data' },
+  { from: 'run_pipeline', to: 'pipeline', type: 'uses' },
+  { from: 'run_round', to: 'pipeline', type: 'uses' },
+
+  // Phase 3 → Phase 4
+  { from: 'pipeline', to: 'specificity', type: 'data', label: 'top candidates' },
+
+  // Phase 4 internal
+  { from: 'specificity', to: 'alphafold', type: 'uses', label: 'off-target AF3' },
+  { from: 'specificity', to: 'proteinmpnn', type: 'uses', label: 'negative design' },
+  { from: 'screen_cr', to: 'specificity', type: 'uses' },
+
+  // Phase 4 → Phase 5
+  { from: 'specificity', to: 'lfa_compat', type: 'data', label: 'specific candidates' },
+
+  // Phase 5 internal
+  { from: 'kinetics', to: 'lfa_compat', type: 'uses' },
+  { from: 'orientation', to: 'lfa_compat', type: 'uses' },
+  { from: 'stability', to: 'lfa_compat', type: 'uses' },
+  { from: 'optimize_lfa', to: 'lfa_compat', type: 'uses' },
+
+  // Phase 5 → Phase 6
+  { from: 'lfa_compat', to: 'exp_data', type: 'data', label: 'top 20 → wet lab' },
+
+  // Phase 6 internal
+  { from: 'exp_data', to: 'calibration', type: 'data' },
+  { from: 'ingest_exp', to: 'calibration', type: 'uses' },
+
+  // Phase 6 → feedback loop
+  { from: 'calibration', to: 'scoring_config', type: 'data', label: 'recalibrated weights' },
+
+  // Infrastructure
+  { from: 'default_config', to: 'config', type: 'data' },
+  { from: 'config', to: 'pipeline', type: 'uses' },
+  { from: 'hpc', to: 'pipeline', type: 'uses' },
+  { from: 'tracking', to: 'pipeline', type: 'uses' },
+  { from: 'default_config', to: 'pdg_config', type: 'data' },
+  { from: 'default_config', to: 'e3g_config', type: 'data' },
+];
+
+// ── Colors ────────────────────────────────────────────────────────
+const phaseColors = {
+  0: '#64748b', 1: '#22d3ee', 2: '#34d399', 3: '#60a5fa',
+  4: '#f97316', 5: '#a78bfa', 6: '#f472b6',
+};
+const typeColors = {
+  core: '#60a5fa', script: '#34d399', config: '#f97316',
+  model: '#a78bfa', filter: '#f472b6', data: '#fbbf24',
+};
+const phaseLabels = {
+  0: 'Infrastructure', 1: 'Phase 1: Targets', 2: 'Phase 2: Seeds',
+  3: 'Phase 3: Design Loop', 4: 'Phase 4: Specificity',
+  5: 'Phase 5: LFA', 6: 'Phase 6: Calibration',
+};
+
+function getColor(node) {
+  return colorMode === 'phase' ? phaseColors[node.phase] : typeColors[node.type];
+}
+
+// ── Drawing ───────────────────────────────────────────────────────
+function worldToScreen(wx, wy) {
+  return [wx * zoom + panX + W/2 - 700*zoom, wy * zoom + panY + H/2 - 250*zoom];
+}
+function screenToWorld(sx, sy) {
+  return [(sx - panX - W/2 + 700*zoom) / zoom, (sy - panY - H/2 + 250*zoom) / zoom];
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Phase regions (subtle backgrounds)
+  if (colorMode === 'phase') {
+    const phaseRanges = {};
+    nodes.forEach(n => {
+      if (!phaseRanges[n.phase]) phaseRanges[n.phase] = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
+      const r = phaseRanges[n.phase];
+      r.minX = Math.min(r.minX, n.x - 60);
+      r.maxX = Math.max(r.maxX, n.x + 60);
+      r.minY = Math.min(r.minY, n.y - 30);
+      r.maxY = Math.max(r.maxY, n.y + 30);
+    });
+    for (const [phase, r] of Object.entries(phaseRanges)) {
+      if (phase == 0) continue;
+      const [sx1, sy1] = worldToScreen(r.minX - 20, r.minY - 30);
+      const [sx2, sy2] = worldToScreen(r.maxX + 20, r.maxY + 20);
+      ctx.fillStyle = phaseColors[phase] + '08';
+      ctx.strokeStyle = phaseColors[phase] + '15';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(sx1, sy1, sx2-sx1, sy2-sy1, 12);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = phaseColors[phase] + '40';
+      ctx.font = '500 10px IBM Plex Sans';
+      ctx.fillText(phaseLabels[phase], sx1 + 8, sy1 + 14);
+    }
+  }
+
+  // Edges
+  edges.forEach(e => {
+    const fromNode = nodes.find(n => n.id === e.from);
+    const toNode = nodes.find(n => n.id === e.to);
+    if (!fromNode || !toNode) return;
+
+    const [x1, y1] = worldToScreen(fromNode.x, fromNode.y);
+    const [x2, y2] = worldToScreen(toNode.x, toNode.y);
+
+    const isHighlighted = hoveredNode && (hoveredNode.id === e.from || hoveredNode.id === e.to);
+    const edgeColor = e.type === 'uses' ? '#60a5fa' : '#475569';
+
+    ctx.beginPath();
+    ctx.strokeStyle = isHighlighted ? edgeColor + 'cc' : edgeColor + '40';
+    ctx.lineWidth = isHighlighted ? 2 : 1;
+
+    // Curved edges
+    const mx = (x1 + x2) / 2;
+    const my = (y1 + y2) / 2;
+    const dx = x2 - x1, dy = y2 - y1;
+    const cx = mx - dy * 0.1, cy = my + dx * 0.1;
+
+    ctx.moveTo(x1, y1);
+    ctx.quadraticCurveTo(cx, cy, x2, y2);
+    ctx.stroke();
+
+    // Arrow
+    const t = 0.92;
+    const ax = (1-t)*(1-t)*x1 + 2*(1-t)*t*cx + t*t*x2;
+    const ay = (1-t)*(1-t)*y1 + 2*(1-t)*t*cy + t*t*y2;
+    const angle = Math.atan2(y2-ay, x2-ax);
+    const arrowSize = isHighlighted ? 7 : 5;
+    ctx.beginPath();
+    ctx.moveTo(x2, y2);
+    ctx.lineTo(x2 - arrowSize*Math.cos(angle-0.4), y2 - arrowSize*Math.sin(angle-0.4));
+    ctx.lineTo(x2 - arrowSize*Math.cos(angle+0.4), y2 - arrowSize*Math.sin(angle+0.4));
+    ctx.closePath();
+    ctx.fillStyle = isHighlighted ? edgeColor + 'cc' : edgeColor + '40';
+    ctx.fill();
+
+    // Edge label
+    if (e.label && isHighlighted) {
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(e.label, cx + 4, cy - 4);
+    }
+  });
+
+  // Nodes
+  nodes.forEach(n => {
+    const [sx, sy] = worldToScreen(n.x, n.y);
+    const color = getColor(n);
+    const isHovered = hoveredNode && hoveredNode.id === n.id;
+    const isConnected = hoveredNode && edges.some(e =>
+      (e.from === hoveredNode.id && e.to === n.id) ||
+      (e.to === hoveredNode.id && e.from === n.id)
+    );
+    const dimmed = hoveredNode && !isHovered && !isConnected;
+
+    const r = isHovered ? 20 : 14;
+
+    // Glow
+    if (isHovered || isConnected) {
+      const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, r * 2.5);
+      grad.addColorStop(0, color + '30');
+      grad.addColorStop(1, color + '00');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r * 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Node circle
+    ctx.beginPath();
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
+    ctx.fillStyle = dimmed ? color + '20' : color + (isHovered ? 'ff' : '80');
+    ctx.fill();
+    ctx.strokeStyle = dimmed ? color + '15' : color + (isHovered ? 'ff' : '60');
+    ctx.lineWidth = isHovered ? 2.5 : 1.5;
+    ctx.stroke();
+
+    // Inner dot
+    ctx.beginPath();
+    ctx.arc(sx, sy, 3, 0, Math.PI * 2);
+    ctx.fillStyle = dimmed ? '#0a0e17' + '60' : '#0a0e17';
+    ctx.fill();
+
+    // Label
+    ctx.font = `${isHovered ? 500 : 400} 10px JetBrains Mono`;
+    ctx.fillStyle = dimmed ? '#475569' : (isHovered ? '#e2e8f0' : '#94a3b8');
+    ctx.textAlign = 'center';
+    ctx.fillText(n.label, sx, sy + r + 14);
+    ctx.textAlign = 'left';
+  });
+}
+
+// ── Interaction ───────────────────────────────────────────────────
+canvas.addEventListener('mousemove', (e) => {
+  if (dragging) {
+    panX += e.clientX - dragStartX;
+    panY += e.clientY - dragStartY;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    draw();
+    return;
+  }
+
+  const [wx, wy] = screenToWorld(e.clientX, e.clientY);
+  let found = null;
+  for (const n of nodes) {
+    const dx = wx - n.x, dy = wy - n.y;
+    if (dx*dx + dy*dy < 25*25) { found = n; break; }
+  }
+
+  if (found !== hoveredNode) {
+    hoveredNode = found;
+    draw();
+
+    if (found) {
+      canvas.style.cursor = 'pointer';
+      const tt = tooltip;
+      let html = `<div class="tt-title">${found.label}</div>`;
+      html += `<div class="tt-path">${found.path}</div>`;
+      html += `<div class="tt-desc">${found.desc}</div>`;
+      if (found.inputs.length) {
+        html += `<div class="tt-io"><div class="tt-io-label input">Inputs</div>`;
+        found.inputs.forEach(i => html += `<div class="tt-io-item">→ ${i}</div>`);
+        html += `</div>`;
+      }
+      if (found.outputs.length) {
+        html += `<div class="tt-io"><div class="tt-io-label output">Outputs</div>`;
+        found.outputs.forEach(o => html += `<div class="tt-io-item">← ${o}</div>`);
+        html += `</div>`;
+      }
+      tt.innerHTML = html;
+      tt.classList.add('visible');
+
+      let tx = e.clientX + 16, ty = e.clientY + 16;
+      if (tx + 360 > W) tx = e.clientX - 370;
+      if (ty + 200 > H) ty = e.clientY - 200;
+      tt.style.left = tx + 'px';
+      tt.style.top = ty + 'px';
+    } else {
+      canvas.style.cursor = 'grab';
+      tooltip.classList.remove('visible');
+    }
+  } else if (found) {
+    let tx = e.clientX + 16, ty = e.clientY + 16;
+    if (tx + 360 > W) tx = e.clientX - 370;
+    if (ty + 200 > H) ty = e.clientY - 200;
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top = ty + 'px';
+  }
+});
+
+canvas.addEventListener('mousedown', (e) => {
+  dragging = true;
+  dragStartX = e.clientX;
+  dragStartY = e.clientY;
+  canvas.style.cursor = 'grabbing';
+});
+canvas.addEventListener('mouseup', () => { dragging = false; canvas.style.cursor = 'grab'; });
+canvas.addEventListener('mouseleave', () => { dragging = false; tooltip.classList.remove('visible'); });
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const factor = e.deltaY > 0 ? 0.92 : 1.08;
+  zoom *= factor;
+  zoom = Math.max(0.3, Math.min(3, zoom));
+  draw();
+}, { passive: false });
+
+function resetView() { panX = 0; panY = 0; zoom = 1; draw(); }
+function toggleFilter(mode) {
+  colorMode = mode;
+  document.getElementById('btn-phase').classList.toggle('active', mode === 'phase');
+  document.getElementById('btn-type').classList.toggle('active', mode === 'type');
+  draw();
+}
+
+canvas.style.cursor = 'grab';
+draw();
+</script>
+</body>
+</html>

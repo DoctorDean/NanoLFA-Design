@@ -7,7 +7,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.4.0] — 2026-04-21
+## [0.5.0] — 2026-04-21
 
 ### Added
 
@@ -141,6 +141,21 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   simulated experimental data, metric-vs-log(KD) scatter plots with
   regression lines, weight recalibration comparison bar chart, correlation
   strength ranking, hidden gem rank-change arrow visualization
+- **Docker multi-stage build** (`Dockerfile`): three image tiers — `core`
+  (CPU-only, ~3GB: RDKit + scoring + filters), `gpu` (~12GB: + PyTorch +
+  ESMFold), `full` (~25GB: + AlphaFold 3 + ProteinMPNN + RFdiffusion)
+- **Docker Compose** (`docker-compose.yml`): services for core, gpu, full,
+  notebook (Jupyter on port 8888), and test runner
+- **Container entrypoint** (`docker/entrypoint.sh`): GPU auto-detection,
+  conda activation, data directory setup
+- **Smoke test** (`scripts/docker_smoke_test.py`): synthetic end-to-end
+  validation of all six phases without GPU or external tools — proves the
+  pipeline executes correctly inside the container
+- **Docker documentation** (`docs/DOCKER.md`): build instructions, cloud
+  GPU setup (Lambda/Vast.ai/GCP), Singularity/Apptainer conversion for
+  HPC, AlphaFold 3 database setup, troubleshooting
+- **Makefile Docker targets**: docker-core, docker-gpu, docker-full,
+  docker-smoke, docker-test, docker-notebook
 
 ### Fixed (post-0.1.0)
 

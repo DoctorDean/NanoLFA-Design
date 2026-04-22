@@ -1,0 +1,59 @@
+# ============================================================================
+# NanoLFA-Design — Docker Ignore
+# ============================================================================
+# Keep the build context small by excluding data, caches, and dev artifacts.
+# ============================================================================
+
+# Git
+.git
+.github
+
+# Data (mounted as volumes, not baked into image)
+data/targets/*/structures/
+data/templates/germline_vhh/*.pdb
+data/results/
+data/experimental/
+alphafold_db/
+
+# Model weights (too large for image, mounted at runtime)
+*.pt
+*.ckpt
+*.h5
+*.npy
+
+# Molecule files (generated at runtime)
+*.sdf
+*.mol2
+*.pdb
+
+# Python caches
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist/
+build/
+.eggs
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Dev/test artifacts
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov/
+wandb/
+mlruns/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker itself (avoid recursive context)
+docker-compose.yml
+Dockerfile
