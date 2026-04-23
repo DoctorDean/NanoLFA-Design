@@ -100,6 +100,10 @@ ignore_missing_imports = true
 module = "nanolfa.utils.chemistry"
 disable_error_code = ["assignment", "index", "arg-type", "attr-defined"]
 
+[[tool.mypy.overrides]]
+module = "nanolfa.models.md_validation"
+disable_error_code = ["operator", "var-annotated"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v"

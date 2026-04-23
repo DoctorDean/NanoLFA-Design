@@ -7,7 +7,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.5.0] — 2026-04-21
+## [0.5.0] — 2026-04-23
 
 ### Added
 
@@ -156,6 +156,22 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   HPC, AlphaFold 3 database setup, troubleshooting
 - **Makefile Docker targets**: docker-core, docker-gpu, docker-full,
   docker-smoke, docker-test, docker-notebook
+- **MD validation layer** (`src/nanolfa/models/md_validation.py`):
+  OpenMM-based short MD simulations (10–50ns) on predicted complexes,
+  PDBFixer preparation, TIP3P-FB solvation, NVT/NPT equilibration,
+  trajectory analysis (ligand RMSD, native contact persistence, per-CDR
+  RMSF, CDR rigidity ratio, approximate MM-GBSA binding free energy),
+  ligand escape detection, and composite MD validation score
+- **MD scoring integration** (`src/nanolfa/scoring/md_scores.py`):
+  multiplicative score adjustment (0.0–1.2×) based on MD validation,
+  tiered recommendations (promote/keep/demote/reject), CDR3 flexibility
+  penalty, contact persistence bonus
+- **MD configuration** (`configs/md.yaml`): full simulation parameters
+  with validation thresholds, scoring integration settings, and optional
+  urine-condition simulation
+- **MD validation CLI** (`scripts/run_md_validation.py`): validates top-N
+  candidates with configurable duration, optional score adjustment via
+  `--adjust-scores`, detailed TSV output with per-candidate metrics
 
 ### Fixed (post-0.1.0)
 
@@ -203,4 +219,4 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - End-to-end validated pipeline with published experimental confirmation
 - Pre-trained scoring models calibrated on internal SPR/BLI data
-- Docker container for reproducible deployment
+- ~~Docker container for reproducible deployment~~ ✅

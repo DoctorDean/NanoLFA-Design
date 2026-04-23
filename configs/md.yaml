@@ -1,0 +1,77 @@
+# ============================================================================
+# NanoLFA-Design — Molecular Dynamics Validation Configuration
+# ============================================================================
+# Parameters for OpenMM-based MD validation of predicted complexes.
+# Phase 3.5: runs on top-N candidates after AF scoring, before Phase 4.
+#
+# Simulation protocol:
+#   1. PDB preparation (PDBFixer: missing atoms, hydrogens, protonation)
+#   2. Solvation (TIP3P-FB water, 150mM NaCl, 1nm padding)
+#   3. Energy minimization (1000 iterations)
+#   4. NVT equilibration (50ps at 300K)
+#   5. NPT equilibration (100ps at 300K, 1atm)
+#   6. Production MD (default 10ns, configurable)
+#   7. Trajectory analysis (RMSD, contacts, RMSF, energetics)
+# ============================================================================
+
+md_validation:
+  enabled: true
+  top_n_candidates: 50                    # validate top-N from Phase 3
+
+  # System preparation
+  forcefield: "amber14-all.xml"
+  water_model: "amber14/tip3pfb.xml"
+  solvent_padding_nm: 1.0
+  ionic_strength_molar: 0.15              # 150mM NaCl (physiological)
+  ph: 7.0
+
+  # Energy minimization
+  min_max_iterations: 1000
+  min_tolerance_kj: 10.0                  # kJ/mol/nm
+
+  # Equilibration
+  equil_nvt_steps: 25000                  # 50ps at 2fs timestep
+  equil_npt_steps: 50000                  # 100ps
+
+  # Production MD
+  production_steps: 5000000               # 10ns at 2fs (default)
+  # Alternative durations:
+  #   2500000  =  5ns (quick screen)
+  #   5000000  = 10ns (standard)
+  #  25000000  = 50ns (thorough, for final candidates)
+  timestep_fs: 2.0
+  temperature_kelvin: 300.0               # 27°C (room temperature)
+  pressure_atm: 1.0
+
+  # Trajectory saving
+  report_interval_steps: 5000             # save frame every 10ps
+  checkpoint_interval_steps: 50000        # checkpoint every 100ps
+
+  # Hardware
+  platform: "auto"                        # auto | CUDA | OpenCL | CPU
+
+  # Validation thresholds
+  thresholds:
+    max_ligand_rmsd: 5.0                  # Å; above this = pose lost
+    min_contact_persistence: 0.60         # fraction; below this = unstable
+    max_cdr3_rmsf: 4.0                    # Å; above this = too floppy
+    min_md_score: 0.50                    # below this = reject
+    escape_distance: 8.0                  # Å; ligand RMSD above this = escaped
+
+  # Scoring integration
+  scoring:
+    # How MD score modifies the static composite score
+    # adjusted_score = static_score * md_modifier
+    boost_threshold: 0.70                 # MD score above this → boost (modifier > 1.0)
+    neutral_threshold: 0.50               # MD score above this → neutral
+    penalty_threshold: 0.30               # MD score above this → mild penalty
+    max_boost: 1.20                       # maximum modifier (20% boost)
+    cdr3_flexibility_penalty: true        # apply extra penalty for floppy CDR3
+
+  # Urine-like conditions (optional, for Phase 5 integration)
+  # Uncomment to simulate binding under LFA sample conditions
+  # urine_conditions:
+  #   enabled: false
+  #   ph: 6.0                             # slightly acidic urine
+  #   ionic_strength_molar: 0.25          # higher than physiological
+  #   urea_concentration_molar: 0.33      # ~200mM urea
