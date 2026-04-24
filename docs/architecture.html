@@ -394,6 +394,43 @@ const nodes = [
     desc: 'Synthetic end-to-end validation: all 6 phases without GPU',
     inputs: ['(none — self-contained)'],
     outputs: ['Pass/fail for each phase'] },
+
+  // Utility and scoring submodules
+  { id: 'pdb_utils', label: 'pdb.py', phase: 0, type: 'core', x: 200, y: 510,
+    path: 'src/nanolfa/utils/pdb.py',
+    desc: 'PDB I/O: chain extraction, interface residue ID, B-factor/pLDDT extraction, RMSD, coordinate retrieval',
+    inputs: ['PDB files'],
+    outputs: ['ChainInfo', 'InterfaceResidue lists', 'coordinate arrays'] },
+  { id: 'confidence_mod', label: 'confidence.py', phase: 3, type: 'core', x: 850, y: 60,
+    path: 'src/nanolfa/scoring/confidence.py',
+    desc: 'AF confidence extraction: ipTM, pTM, per-residue pLDDT, PAE matrix, pDockQ, AF2/AF3 format support',
+    inputs: ['AF prediction directory', 'Complex PDB'],
+    outputs: ['AFConfidenceMetrics', 'PAE matrix'] },
+  { id: 'structural_mod', label: 'structural.py', phase: 3, type: 'core', x: 850, y: 260,
+    path: 'src/nanolfa/scoring/structural.py',
+    desc: 'Interface geometry: shape complementarity (Rosetta or geometric approx), BSA, gap volume, planarity, H-bonds, salt bridges, hydrophobic contacts',
+    inputs: ['Complex PDB'],
+    outputs: ['InterfaceGeometry dataclass'] },
+  { id: 'energy_mod', label: 'energy.py', phase: 3, type: 'core', x: 850, y: 340,
+    path: 'src/nanolfa/scoring/energy.py',
+    desc: 'Binding energy: Rosetta (constrained relax + InterfaceAnalyzer), FoldX (AnalyseComplex), statistical potential fallback',
+    inputs: ['Complex PDB'],
+    outputs: ['EnergyResult (ΔG in REU or kcal/mol)'] },
+  { id: 'plotting', label: 'plotting.py', phase: 0, type: 'core', x: 350, y: 510,
+    path: 'src/nanolfa/utils/plotting.py',
+    desc: 'Visualization: convergence curves, metric box plots, cross-reactivity heatmaps, MD validation summaries, correlation scatters',
+    inputs: ['RoundResult', 'MDTrajectoryMetrics', 'SpecificityResult'],
+    outputs: ['matplotlib Figures (PNG/PDF)'] },
+  { id: 'md_validation', label: 'md_validation.py', phase: 3, type: 'model', x: 530, y: 50,
+    path: 'src/nanolfa/models/md_validation.py',
+    desc: 'OpenMM MD validation: system prep, NVT/NPT equilibration, 10-50ns production, RMSD/contact/RMSF analysis',
+    inputs: ['Predicted complex PDB'],
+    outputs: ['MDTrajectoryMetrics', 'trajectory DCD', 'final frame PDB'] },
+  { id: 'md_scores', label: 'md_scores.py', phase: 3, type: 'core', x: 670, y: 50,
+    path: 'src/nanolfa/scoring/md_scores.py',
+    desc: 'MD-to-score integration: multiplicative modifier (0.0-1.2x), CDR3 flexibility penalty, tiered recommendations',
+    inputs: ['MDTrajectoryMetrics', 'static composite score'],
+    outputs: ['MDScoreAdjustment (modified score + recommendation)'] },
 ];
 
 // ── Edge definitions ──────────────────────────────────────────────
@@ -460,6 +497,24 @@ const edges = [
   { from: 'tracking', to: 'pipeline', type: 'uses' },
   { from: 'default_config', to: 'pdg_config', type: 'data' },
   { from: 'default_config', to: 'e3g_config', type: 'data' },
+
+  // Scoring submodules → composite scorer
+  { from: 'confidence_mod', to: 'composite', type: 'uses', label: 'ipTM, pLDDT, pDockQ' },
+  { from: 'structural_mod', to: 'composite', type: 'uses', label: 'Sc, BSA, contacts' },
+  { from: 'energy_mod', to: 'composite', type: 'uses', label: 'ΔG_bind' },
+
+  // PDB utilities → used by scoring and LFA modules
+  { from: 'pdb_utils', to: 'confidence_mod', type: 'uses' },
+  { from: 'pdb_utils', to: 'structural_mod', type: 'uses' },
+  { from: 'pdb_utils', to: 'kinetics', type: 'uses' },
+
+  // MD validation → scoring integration
+  { from: 'md_validation', to: 'md_scores', type: 'data', label: 'trajectory metrics' },
+  { from: 'md_scores', to: 'pipeline', type: 'uses', label: 'score adjustment' },
+  { from: 'alphafold', to: 'md_validation', type: 'data', label: 'complex PDBs' },
+
+  // Plotting → used across phases (no hard dependency)
+  { from: 'plotting', to: 'tracking', type: 'uses', label: 'figures' },
 ];
 
 // ── Colors ────────────────────────────────────────────────────────

@@ -104,6 +104,10 @@ disable_error_code = ["assignment", "index", "arg-type", "attr-defined"]
 module = "nanolfa.models.md_validation"
 disable_error_code = ["operator", "var-annotated"]
 
+[[tool.mypy.overrides]]
+module = "nanolfa.utils.plotting"
+disable_error_code = ["attr-defined"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v"

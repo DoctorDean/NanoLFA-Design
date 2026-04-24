@@ -7,7 +7,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
-## [0.5.0] — 2026-04-23
+## [0.6.0] — 2026-04-24
 
 ### Added
 
@@ -16,6 +16,7 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Configuration system**: hierarchical YAML configs with per-target overrides
   - `configs/default.yaml` — master pipeline parameters
   - `configs/scoring.yaml` — composite scoring weights and thresholds
+  - `configs/md.yaml` — molecular dynamics run parameters
   - `configs/alphafold.yaml` — AlphaFold-Multimer run parameters
   - `configs/proteinmpnn.yaml` — ProteinMPNN sequence design parameters
   - `configs/targets/pdg.yaml` — PdG-specific settings
@@ -172,6 +173,28 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **MD validation CLI** (`scripts/run_md_validation.py`): validates top-N
   candidates with configurable duration, optional score adjustment via
   `--adjust-scores`, detailed TSV output with per-candidate metrics
+- **PDB utilities** (`src/nanolfa/utils/pdb.py`): chain extraction, interface
+  residue identification via NeighborSearch, per-residue B-factor/pLDDT
+  extraction, atom coordinate retrieval, RMSD computation between structures
+- **AF confidence extraction** (`src/nanolfa/scoring/confidence.py`): AF2-
+  Multimer and AF3 output parsing, per-residue pLDDT, interface pLDDT, PAE
+  matrix extraction, inter-chain PAE, pDockQ computation (Bryant et al.
+  sigmoid fit)
+- **Structural geometry** (`src/nanolfa/scoring/structural.py`): shape
+  complementarity via PyRosetta with geometric contact-density fallback,
+  BSA via FreeSASA with contact-count fallback, gap volume index (ConvexHull),
+  interface planarity (SVD), H-bond/salt bridge/hydrophobic contact counting
+- **Energy rescoring** (`src/nanolfa/scoring/energy.py`): three-tier engine
+  (Rosetta constrained relax + InterfaceAnalyzer → FoldX RepairPDB +
+  AnalyseComplex → knowledge-based statistical potential fallback requiring
+  no external software)
+- **Visualization helpers** (`src/nanolfa/utils/plotting.py`): convergence
+  curves (best/mean/delta), metric distribution box plots, cross-reactivity
+  heatmap, MD validation summary (RMSD/contacts/RMSF/score), correlation
+  scatter with regression line; consistent style with configurable save
+- Updated **architecture diagram** (`docs/architecture.html`) with 7 new
+  nodes and 10 new edges for the scoring submodules, PDB utilities, MD
+  validation, and plotting
 
 ### Fixed (post-0.1.0)
 
