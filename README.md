@@ -89,42 +89,52 @@ nanobody-lfa-design/
 ├── CHANGELOG.md                    # Version history
 ├── LICENSE                         # Apache 2.0
 ├── pyproject.toml                  # Project metadata & dependencies
-├── setup.cfg                       # Package configuration
 ├── requirements.txt                # Pinned dependencies
 ├── environment.yml                 # Conda environment specification
-├── Makefile                        # Common commands
+├── Makefile                        # Common commands (includes Docker targets)
+├── Dockerfile                      # Multi-stage: core / gpu / full
+├── docker-compose.yml              # Service definitions
+├── .dockerignore                   # Docker build context exclusions
 │
 ├── .github/
-│   └── workflows/
-│       └── ci.yml                  # CI pipeline
+│   ├── workflows/
+│   │   └── ci.yml                  # CI: lint + typecheck + tests + config validation
+│   ├── CONTRIBUTING.md             # Contribution guidelines
+│   ├── PULL_REQUEST_TEMPLATE.md    # PR template with scientific justification
+│   ├── CODEOWNERS                  # Auto-reviewer assignment
+│   ├── SECURITY.md                 # Vulnerability reporting policy
+│   ├── dependabot.yml              # Automated dependency updates
+│   └── ISSUE_TEMPLATE/
+│       ├── bug_report.md
+│       ├── feature_request.md
+│       ├── scientific_question.md
+│       └── config.yml
 │
 ├── configs/
 │   ├── default.yaml                # Master configuration
 │   ├── scoring.yaml                # Scoring weights & thresholds
-│   ├── alphafold.yaml              # AF-Multimer run parameters
-│   ├── proteinmpnn.yaml            # ProteinMPNN parameters
-│   └── targets/
-│       ├── pdg.yaml                # PdG-specific settings
-│       └── e3g.yaml                # E3G-specific settings
+│   ├── md.yaml                     # MD validation parameters
+│   ├── targets/
+│   │   ├── pdg.yaml                # PdG-specific settings
+│   │   └── e3g.yaml                # E3G-specific settings
+│   └── hpc/
+│       ├── slurm_af_round.sh       # Slurm template: single round
+│       └── slurm_full_pipeline.sh  # Slurm template: full pipeline
 │
-├── data/
-│   ├── targets/                    # Hormone structures & conjugates
-│   │   ├── pdg/
-│   │   └── e3g/
-│   ├── templates/                  # Nanobody scaffold structures
-│   │   ├── germline_vhh/
-│   │   └── known_binders/
-│   └── results/                    # Pipeline outputs per round
-│       ├── round_01/
-│       ├── round_02/
-│       └── ...
+├── docker/
+│   └── entrypoint.sh               # Container entry point (GPU detection)
+│
+├── data/                           # Pipeline I/O (gitignored, mounted as volume)
+│   ├── targets/                    # Phase 1 outputs
+│   ├── templates/                  # Phase 2 scaffold library
+│   ├── results/                    # Phase 3–5 per-round outputs
+│   └── experimental/               # Phase 6 wet-lab data (user-provided)
 │
 ├── docs/
 │   ├── PROTOCOL.md                 # Detailed computational protocol
 │   ├── SCORING.md                  # Scoring function documentation
-│   ├── THRESHOLDS.md               # Decision thresholds & rationale
-│   ├── figures/
-│   └── protocols/
+│   ├── DOCKER.md                   # Docker/Singularity setup guide
+│   └── architecture.html           # Interactive pipeline network diagram
 │
 ├── notebooks/
 │   ├── 01_target_preparation.ipynb
@@ -136,74 +146,100 @@ nanobody-lfa-design/
 │
 ├── scripts/
 │   ├── run_pipeline.py             # Master pipeline orchestrator
-│   ├── prepare_targets.py          # Phase 1
-│   ├── generate_seeds.py           # Phase 2
-│   ├── run_design_round.py         # Phase 3 (single iteration)
-│   ├── screen_crossreactivity.py   # Phase 4
-│   ├── optimize_lfa.py             # Phase 5
-│   └── ingest_experimental.py      # Phase 6
+│   ├── prepare_targets.py          # Phase 1: target preparation
+│   ├── run_design_round.py         # Phase 3: single design round (HPC)
+│   ├── run_md_validation.py        # Phase 3.5: MD validation
+│   ├── screen_crossreactivity.py   # Phase 4: specificity screening
+│   ├── optimize_lfa.py             # Phase 5: LFA compatibility
+│   ├── ingest_experimental.py      # Phase 6: experimental feedback
+│   ├── docker_smoke_test.py        # Synthetic end-to-end test
+│   └── setup/
+│       ├── fetch_imgt_germlines.py # Phase 2: scaffold curation
+│       ├── download_af_params.sh   # AlphaFold database download
+│       └── download_proteinmpnn.sh # ProteinMPNN weight download
 │
 ├── src/
 │   └── nanolfa/
 │       ├── __init__.py
 │       ├── core/
-│       │   ├── __init__.py
 │       │   ├── pipeline.py         # Pipeline orchestration
 │       │   ├── config.py           # Configuration management
-│       │   └── logging.py          # Structured logging
+│       │   ├── logging.py          # Structured per-round logging
+│       │   ├── hpc.py              # Slurm/PBS/local job submission
+│       │   ├── tracking.py         # Weights & Biases integration
+│       │   └── calibration.py      # Experimental data ingestion & recalibration
 │       ├── models/
-│       │   ├── __init__.py
-│       │   ├── alphafold.py        # AF-Multimer wrapper
-│       │   ├── proteinmpnn.py      # ProteinMPNN wrapper
-│       │   ├── rfdiffusion.py      # RFdiffusion wrapper
-│       │   └── esmfold.py          # ESMFold fast prescreening
+│       │   ├── alphafold.py        # AF3 / AF-Multimer wrapper
+│       │   ├── proteinmpnn.py      # ProteinMPNN CDR design
+│       │   ├── rfdiffusion.py      # RFdiffusion CDR3 backbone generation
+│       │   ├── esmfold.py          # ESMFold prescreening (per-region pLDDT)
+│       │   └── md_validation.py    # OpenMM molecular dynamics validation
 │       ├── scoring/
-│       │   ├── __init__.py
-│       │   ├── composite.py        # Composite scoring function
-│       │   ├── structural.py       # Interface geometry metrics
-│       │   ├── energy.py           # Physics-based rescoring
-│       │   └── confidence.py       # AF confidence extraction
+│       │   ├── composite.py        # Weighted composite scoring function
+│       │   ├── confidence.py       # AF confidence extraction (ipTM, pDockQ, PAE)
+│       │   ├── structural.py       # Interface geometry (Sc, BSA, contacts)
+│       │   ├── energy.py           # Rosetta/FoldX/statistical binding energy
+│       │   └── md_scores.py        # MD-derived score adjustments
 │       ├── filters/
-│       │   ├── __init__.py
-│       │   ├── developability.py   # Aggregation, charge, hydrophobicity
-│       │   ├── specificity.py      # Cross-reactivity filters
-│       │   └── lfa_compat.py       # LFA-specific constraints
+│       │   ├── developability.py   # Aggregation, charge, hydrophobicity, liabilities
+│       │   ├── specificity.py      # Cross-reactivity screening + negative design
+│       │   └── lfa_compat.py       # LFA kinetics + orientation + stability gate
 │       ├── lfa/
-│       │   ├── __init__.py
-│       │   ├── kinetics.py         # kon/koff estimation
-│       │   ├── orientation.py      # Conjugation geometry
+│       │   ├── kinetics.py         # Kinetic accessibility estimation
+│       │   ├── orientation.py      # Gold NP conjugation geometry
 │       │   └── stability.py        # Thermal stability prediction
 │       └── utils/
-│           ├── __init__.py
-│           ├── pdb.py              # PDB I/O utilities
-│           ├── sequence.py         # Sequence manipulation
-│           ├── chemistry.py        # Small-molecule handling
-│           └── plotting.py         # Visualization helpers
+│           ├── pdb.py              # PDB I/O, chain extraction, RMSD
+│           ├── sequence.py         # VHH annotation, validation, clustering
+│           ├── chemistry.py        # RDKit conformer generation, epitope mapping
+│           └── plotting.py         # Visualization helpers for all phases
 │
 └── tests/
-    ├── conftest.py
-    ├── test_scoring.py
-    ├── test_filters.py
-    ├── test_alphafold_wrapper.py
-    └── test_pipeline.py
+    ├── conftest.py                 # Shared fixtures
+    ├── test_scoring.py             # Composite scoring tests
+    ├── test_filters.py             # Developability filter tests
+    └── test_sequence.py            # VHH sequence utility tests
 ```
 
 ---
 
 ## Quick Start
 
-### Prerequisites
+### Option A: Docker (recommended)
+
+```bash
+git clone https://github.com/DoctorDean/nanobody-lfa-design.git
+cd nanobody-lfa-design
+
+# Build the CPU-only image (~3GB, no GPU needed)
+make docker-core
+
+# Verify everything works
+make docker-smoke
+
+# Run Phase 1: target preparation
+docker compose run --rm core \
+  python scripts/prepare_targets.py --config configs/targets/pdg.yaml
+
+# Start Jupyter notebooks
+make docker-notebook
+# Open http://localhost:8888
+```
+
+See [docs/DOCKER.md](docs/DOCKER.md) for GPU images and HPC deployment.
+
+### Option B: Conda (native)
+
+#### Prerequisites
 
 - Linux (Ubuntu 20.04+ / CentOS 7+)
 - CUDA 11.8+ with NVIDIA GPU (A100 80GB recommended; V100 32GB minimum)
 - Conda / Mamba
-- AlphaFold v2.3.2+ or AlphaFold 3 (for small-molecule docking)
-- ColabFold (optional, for faster MSA generation)
+- AlphaFold 3 (for small-molecule docking)
 
-### Installation
+#### Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/DoctorDean/nanobody-lfa-design.git
 cd nanobody-lfa-design
 
@@ -236,8 +272,25 @@ python scripts/run_design_round.py \
 
 # Cross-reactivity screening
 python scripts/screen_crossreactivity.py \
-  --candidates data/results/round_03/top_candidates.pdb \
-  --panel configs/targets/pdg.yaml
+  --candidates data/results/round_05/top_candidates.fasta \
+  --config configs/targets/pdg.yaml
+
+# MD validation of top candidates
+python scripts/run_md_validation.py \
+  --candidates data/results/round_05/top_candidates.fasta \
+  --complex-dir data/results/round_05/predictions/ \
+  --duration-ns 10
+
+# LFA compatibility screening
+python scripts/optimize_lfa.py \
+  --candidates data/results/specificity/specific_candidates.fasta \
+  --config configs/targets/pdg.yaml
+
+# Experimental feedback (after wet-lab data is available)
+python scripts/ingest_experimental.py \
+  --spr data/experimental/spr_kinetics.csv \
+  --scores data/results/round_05/scores.tsv \
+  --config configs/targets/pdg.yaml
 ```
 
 ---
@@ -310,6 +363,35 @@ scoring:
 
 ---
 
+## Docker
+
+Three image tiers for different use cases:
+
+| Image | Size | GPU? | Use case |
+|---|---|---|---|
+| `nanolfa:core` | ~3 GB | No | Phase 1–2, scoring, filters, tests |
+| `nanolfa:gpu` | ~12 GB | Yes | Above + ESMFold prescreening |
+| `nanolfa:full` | ~25 GB | Yes | Full pipeline including AF3, ProteinMPNN, RFdiffusion |
+
+```bash
+make docker-core       # build CPU image
+make docker-smoke      # run synthetic end-to-end test
+make docker-notebook   # start Jupyter on port 8888
+```
+
+See [docs/DOCKER.md](docs/DOCKER.md) for GPU setup, cloud deployment, and Singularity conversion.
+
+---
+
+## Architecture
+
+An interactive network diagram of the full pipeline is available at
+[docs/architecture.html](docs/architecture.html). Open it in a browser to
+explore the data flow between all 39 components with hover tooltips
+showing inputs, outputs, and file paths.
+
+---
+
 ## Citation
 
 If you use this pipeline, please cite:
@@ -339,4 +421,4 @@ Apache 2.0. See [LICENSE](LICENSE).
 
 ## Contributing
 
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for guidelines. All computational designs must be experimentally validated before publication claims.
+See [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) for guidelines. All computational designs must be experimentally validated before publication claims.

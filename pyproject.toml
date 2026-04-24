@@ -47,6 +47,8 @@ dependencies = [
     "fair-esm>=2.0",
     "matplotlib>=3.9",
     "wandb>=0.17",
+    "mdtraj>=1.9",
+    "scikit-learn>=1.5",
 ]
 
 [project.optional-dependencies]
