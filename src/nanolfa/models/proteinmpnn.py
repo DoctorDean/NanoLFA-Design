@@ -103,7 +103,9 @@ class ProteinMPNNDesigner:
 
         Returns new Candidate objects with designed sequences.
         """
-        from nanolfa.core.pipeline import Candidate as CandidateClass
+        if parent.complex_path is None:
+            raise ValueError(f"Parent {parent.candidate_id} has no complex_path")
+        complex_path: Path = parent.complex_path
 
         work_dir = Path(f"/tmp/mpnn_{parent.candidate_id}_{uuid.uuid4().hex[:8]}")
         work_dir.mkdir(parents=True, exist_ok=True)
@@ -114,7 +116,7 @@ class ProteinMPNNDesigner:
         # Write fixed positions JSON
         fixed_pos_jsonl = work_dir / "fixed_positions.jsonl"
         chain_id = "A"
-        fixed_dict = {parent.complex_path.stem: {chain_id: fixed_positions}}
+        fixed_dict = {complex_path.stem: {chain_id: fixed_positions}}
         with open(fixed_pos_jsonl, "w") as f:
             f.write(json.dumps(fixed_dict) + "\n")
 
@@ -122,12 +124,12 @@ class ProteinMPNNDesigner:
         bias_jsonl = work_dir / "bias_AA.jsonl"
         bias_dict = self._build_aa_bias_dict(parent, target_cdrs)
         with open(bias_jsonl, "w") as f:
-            f.write(json.dumps({parent.complex_path.stem: bias_dict}) + "\n")
+            f.write(json.dumps({complex_path.stem: bias_dict}) + "\n")
 
         # Run ProteinMPNN
         cmd = [
             "python", str(self.install_path / "protein_mpnn_run.py"),
-            "--pdb_path", str(parent.complex_path),
+            "--pdb_path", str(complex_path),
             "--out_folder", str(work_dir / "output"),
             "--num_seq_per_target", str(n_sequences),
             "--sampling_temp", str(temperature),
@@ -145,7 +147,7 @@ class ProteinMPNNDesigner:
             raise RuntimeError(f"ProteinMPNN failed: {result.stderr[:500]}")
 
         # Parse output FASTA
-        output_fasta = work_dir / "output" / "seqs" / f"{parent.complex_path.stem}.fa"
+        output_fasta = work_dir / "output" / "seqs" / f"{complex_path.stem}.fa"
         variants = self._parse_mpnn_output(output_fasta, parent)
 
         return variants
@@ -179,7 +181,7 @@ class ProteinMPNNDesigner:
         Applies global biases (penalize Cys, Met, etc.) to all designed positions,
         plus target-specific CDR3 preferences from config.
         """
-        bias: dict[str, dict[str, float]] = {}
+        bias: dict[str, dict[str, dict[str, float]]] = {}
         chain_id = "A"
         bias[chain_id] = {}
 
@@ -187,7 +189,7 @@ class ProteinMPNNDesigner:
             if cdr_name in IMGT_CDR_RANGES:
                 start, end = IMGT_CDR_RANGES[cdr_name]
                 for pos in range(start, min(end + 1, len(parent.sequence) + 1)):
-                    pos_bias = dict(self.aa_bias)  # copy global biases
+                    pos_bias: dict[str, float] = dict(self.aa_bias)
                     # Add CDR3-specific boosts if configured
                     if cdr_name == "CDR3" and hasattr(self.config, "cdr3_aa_preferences"):
                         for aa, boost in self.config.cdr3_aa_preferences.items():
@@ -238,7 +240,7 @@ class ProteinMPNNDesigner:
         Returns list of strings like ["A45G", "Y102W"].
         """
         mutations = []
-        for i, (p, v) in enumerate(zip(parent_seq, variant_seq)):
+        for i, (p, v) in enumerate(zip(parent_seq, variant_seq, strict=False)):
             if p != v:
                 mutations.append(f"{p}{i + 1}{v}")
         return mutations

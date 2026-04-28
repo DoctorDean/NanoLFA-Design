@@ -1,0 +1,140 @@
+# ============================================================================
+# NanoLFA-Design — Docker Compose
+# ============================================================================
+# Services for different pipeline use cases.
+#
+# Usage:
+#   docker compose build core          # build CPU-only image (~3GB)
+#   docker compose build gpu           # build GPU image (~12GB)
+#   docker compose build full          # build full pipeline (~25GB)
+#
+#   docker compose run --rm core <command>
+#   docker compose run --rm gpu <command>
+#   docker compose run --rm full <command>
+#
+# Examples:
+#   # Phase 1: target preparation (CPU only)
+#   docker compose run --rm core \
+#     python scripts/prepare_targets.py --config configs/targets/pdg.yaml
+#
+#   # Smoke test (validates all phases run)
+#   docker compose run --rm core \
+#     python scripts/docker_smoke_test.py
+#
+#   # Full pipeline on GPU
+#   docker compose run --rm full \
+#     python scripts/run_pipeline.py --config configs/targets/pdg.yaml
+#
+#   # Jupyter notebook server
+#   docker compose up notebook
+# ============================================================================
+
+services:
+
+  # --------------------------------------------------------------------------
+  # Core: CPU-only, RDKit + scoring + filters (~3GB)
+  # --------------------------------------------------------------------------
+  core:
+    build:
+      context: .
+      target: core
+    image: nanolfa:core
+    volumes:
+      - ./data:/data
+      - ./configs:/app/configs
+      - ./notebooks:/app/notebooks
+    working_dir: /app
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  # --------------------------------------------------------------------------
+  # GPU: Core + PyTorch + ESMFold (~12GB)
+  # --------------------------------------------------------------------------
+  gpu:
+    build:
+      context: .
+      target: gpu
+    image: nanolfa:gpu
+    volumes:
+      - ./data:/data
+      - ./configs:/app/configs
+    working_dir: /app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  # --------------------------------------------------------------------------
+  # Full: Complete pipeline with AF3 + ProteinMPNN + RFdiffusion (~25GB)
+  # --------------------------------------------------------------------------
+  full:
+    build:
+      context: .
+      target: full
+    image: nanolfa:full
+    volumes:
+      - ./data:/data
+      - ./configs:/app/configs
+      # Mount AlphaFold databases (too large for image)
+      - ${AF_DB_PATH:-./alphafold_db}:/data/alphafold_db:ro
+    working_dir: /app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - ALPHAFOLD_PATH=/opt/alphafold
+      - PROTEINMPNN_PATH=/opt/ProteinMPNN
+      - RFDIFFUSION_PATH=/opt/RFdiffusion
+      - AF_DB_PATH=/data/alphafold_db
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    shm_size: '16gb'  # AlphaFold needs large shared memory
+
+  # --------------------------------------------------------------------------
+  # Jupyter: Notebook server for interactive work
+  # --------------------------------------------------------------------------
+  notebook:
+    build:
+      context: .
+      target: core
+    image: nanolfa:core
+    volumes:
+      - ./data:/data
+      - ./configs:/app/configs
+      - ./notebooks:/app/notebooks
+    working_dir: /app
+    ports:
+      - "8888:8888"
+    environment:
+      - PYTHONUNBUFFERED=1
+    command: >
+      jupyter lab
+        --ip=0.0.0.0
+        --port=8888
+        --no-browser
+        --allow-root
+        --NotebookApp.token=''
+        --NotebookApp.password=''
+
+  # --------------------------------------------------------------------------
+  # Test: Run the test suite
+  # --------------------------------------------------------------------------
+  test:
+    build:
+      context: .
+      target: core
+    image: nanolfa:core
+    volumes:
+      - ./data:/data
+    working_dir: /app
+    command: pytest tests/ -v --tb=short

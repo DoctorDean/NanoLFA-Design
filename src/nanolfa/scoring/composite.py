@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 from omegaconf import DictConfig
 
@@ -126,10 +126,9 @@ class CompositeScorer:
         vmax = params["max"]
         invert = params.get("invert", False)
 
-        if invert:
-            normalized = (vmax - value) / (vmax - vmin)
-        else:
-            normalized = (value - vmin) / (vmax - vmin)
+        normalized = (
+            (vmax - value) / (vmax - vmin) if invert else (value - vmin) / (vmax - vmin)
+        )
 
         return max(0.0, min(1.0, normalized))
 
@@ -169,7 +168,7 @@ class CompositeScorer:
         Interface residues: any residue with a heavy atom within
         `self.interface_cutoff` Å of a heavy atom on the partner chain.
         """
-        from Bio.PDB import PDBParser, NeighborSearch
+        from Bio.PDB import NeighborSearch, PDBParser
 
         parser = PDBParser(QUIET=True)
         structure = parser.get_structure("complex", str(complex_path))
@@ -324,7 +323,7 @@ class CompositeScorer:
 
         # Need to compute SASA of individual chains
         # Extract chains to temporary files
-        from Bio.PDB import PDBParser, PDBIO, Select
+        from Bio.PDB import PDBIO, PDBParser, Select
 
         parser = PDBParser(QUIET=True)
         structure = parser.get_structure("complex", str(complex_path))
@@ -333,10 +332,11 @@ class CompositeScorer:
 
         total_individual_sasa = 0.0
         for chain in chains:
+            chain_id = chain.id  # capture in default arg below to avoid late-binding
 
             class ChainSelect(Select):
-                def accept_chain(self, c: object) -> bool:
-                    return c.id == chain.id  # type: ignore[union-attr]
+                def accept_chain(self, c: Any, _cid: str = chain_id) -> bool:
+                    return bool(c.id == _cid)
 
             io = PDBIO()
             io.set_structure(structure)
