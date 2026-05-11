@@ -83,7 +83,7 @@ submitit==1.5.1                         # Slurm job submission
 pytest==8.2.0
 pytest-cov==5.0.0
 mypy==1.10.0
-ruff==0.4.4
+ruff==0.15.12
 
 # --- Jupyter / Notebook support -------------------------------------------
 jupyterlab==4.2.0
