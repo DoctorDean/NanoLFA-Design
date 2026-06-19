@@ -23,7 +23,7 @@ rosettacommons-pyrosetta==2024.10      # Requires separate license
 foldx-api>=5.0                          # Requires separate license; wrapper only
 
 # --- Small-Molecule Chemistry ----------------------------------------------
-rdkit==2024.03.3
+rdkit==2026.3.1
 openbabel==3.1.1
 meeko==0.5.0                            # AutoDock Meeko for ligand prep
 
