@@ -36,7 +36,7 @@ tensorflow==2.16.1                      # AlphaFold dependency
 
 # --- AlphaFold & Structure Prediction -------------------------------------
 alphafold==2.3.2                        # Install separately; see environment.yml
-colabfold==1.5.5                        # Optional fast MSA server
+colabfold==1.6.1                        # Optional fast MSA server
 openfold==2.1.0                         # Alternative AF implementation
 
 # --- Protein Design Tools --------------------------------------------------
