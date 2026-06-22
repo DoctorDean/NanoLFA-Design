@@ -24,7 +24,7 @@ foldx-api>=5.0                          # Requires separate license; wrapper onl
 
 # --- Small-Molecule Chemistry ----------------------------------------------
 rdkit==2026.3.1
-openbabel==3.1.1
+openbabel==3.2.0
 meeko==0.5.0                            # AutoDock Meeko for ligand prep
 
 # --- Machine Learning & Deep Learning -------------------------------------
