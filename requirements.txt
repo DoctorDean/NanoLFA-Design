@@ -8,7 +8,7 @@
 
 # --- Core Scientific Stack ------------------------------------------------
 numpy==1.26.4
-scipy==1.13.0
+scipy==1.15.3
 pandas==2.2.2
 
 # --- Structural Biology ----------------------------------------------------
@@ -50,7 +50,7 @@ freesasa==2.2.1                         # Solvent-accessible surface area
 pdb2pqr==3.6.1                          # Electrostatics preparation
 pymol-open-source==2.5.0               # Structure visualization (headless)
 mdtraj==1.9.9                           # MD trajectory analysis
-scikit-learn==1.5.0                     # Ridge regression for calibration
+scikit-learn==1.7.2                     # Ridge regression for calibration
 
 # --- Developability Prediction ---------------------------------------------
 aggrescan3d==2.0                        # Aggregation propensity (wrapper)
